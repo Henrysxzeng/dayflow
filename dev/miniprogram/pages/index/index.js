@@ -465,7 +465,7 @@ Page({
       ctx.setFillStyle('rgba(255,255,255,0.55)')
       ctx.setFontSize(13)
       ctx.setTextAlign('left')
-      ctx.fillText('DayFlow', 22, 34)
+      ctx.fillText('FlowCast', 22, 34)
 
       // 日期
       ctx.setFillStyle('rgba(255,255,255,0.4)')

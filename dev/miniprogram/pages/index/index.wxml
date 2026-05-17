@@ -7,7 +7,7 @@
       <view style="font-size:36rpx; font-weight:700; margin-top:4rpx;">
         <block wx:if="{{planReady}}">今天，就做这几件</block>
         <block wx:elif="{{waitingForSchedule}}">告诉 Flow 你的时间</block>
-        <block wx:elif="{{showOnboarding}}">欢迎使用 DayFlow</block>
+        <block wx:elif="{{showOnboarding}}">欢迎使用 FlowCast</block>
         <block wx:elif="{{showRestDay}}">今天没有安排</block>
         <block wx:else>今天能用多少时间？</block>
       </view>

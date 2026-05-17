@@ -139,7 +139,7 @@ Page({
     const now = new Date()
     const monthStr = `${now.getMonth() + 1}月`
     return {
-      title: `${monthStr}我用 DayFlow 完成了 ${totalCompleted} 件任务，连续高效 ${streak} 天 🔥`,
+      title: `${monthStr}我用 FlowCast 完成了 ${totalCompleted} 件任务，连续高效 ${streak} 天 🔥`,
       path: '/pages/index/index'
     }
   }

@@ -1,4 +1,4 @@
-# DayFlow · 开发环境搭建指南
+# FlowCast · 开发环境搭建指南
 **版本：** v1.0  
 **日期：** 2026-05-17  
 **阶段：** 软件开发生命周期 · 第四阶段
@@ -7,7 +7,7 @@
 
 ## 概览
 
-完成本指南后，你将拥有一个可在模拟器中运行的 DayFlow 小程序，并成功验证：
+完成本指南后，你将拥有一个可在模拟器中运行的 FlowCast 小程序，并成功验证：
 - 小程序正常加载 ✓
 - 云开发数据库读写正常 ✓
 - DeepSeek AI 接口调用成功 ✓
@@ -43,7 +43,7 @@
 1. 下载地址：[developers.weixin.qq.com/miniprogram/dev/devtools/download.html](https://developers.weixin.qq.com/miniprogram/dev/devtools/download.html)
 2. 安装完成后登录（用你注册小程序的微信账号扫码）
 3. 点击**导入项目**
-4. 目录选择：`D:\Investment\DayFlow\dev`
+4. 目录选择：`D:\Investment\FlowCast\dev`
 5. AppID 填入你在第一步获取的 AppID
 6. 点击**确定**
 
@@ -51,9 +51,9 @@
 
 ## 第四步：填入配置信息
 
-打开 `D:\Investment\DayFlow\dev\project.config.json`，将 `YOUR_APPID_HERE` 替换为你的真实 AppID。
+打开 `D:\Investment\FlowCast\dev\project.config.json`，将 `YOUR_APPID_HERE` 替换为你的真实 AppID。
 
-打开 `D:\Investment\DayFlow\dev\miniprogram\app.js`，将 `YOUR_ENV_ID_HERE` 替换为你的云开发环境 ID。
+打开 `D:\Investment\FlowCast\dev\miniprogram\app.js`，将 `YOUR_ENV_ID_HERE` 替换为你的云开发环境 ID。
 
 ---
 

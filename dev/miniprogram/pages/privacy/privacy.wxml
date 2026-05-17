@@ -1,9 +1,9 @@
 <scroll-view scroll-y style="height:100vh; padding:32rpx; box-sizing:border-box;">
-  <view style="font-size:36rpx; font-weight:700; color:#111827; margin-bottom:32rpx;">DayFlow 隐私政策</view>
+  <view style="font-size:36rpx; font-weight:700; color:#111827; margin-bottom:32rpx;">FlowCast 隐私政策</view>
   <view style="font-size:24rpx; color:#6B7280; margin-bottom:48rpx;">更新日期：2026年5月</view>
 
   <view style="font-size:26rpx; color:#374151; line-height:44rpx; margin-bottom:32rpx;">
-    DayFlow（以下简称"我们"）非常重视您的隐私保护。本隐私政策说明我们如何收集、使用和保护您的个人信息。使用本小程序即表示您同意本政策。
+    FlowCast（以下简称"我们"）非常重视您的隐私保护。本隐私政策说明我们如何收集、使用和保护您的个人信息。使用本小程序即表示您同意本政策。
   </view>
 
   <view style="font-size:30rpx; font-weight:600; color:#111827; margin-bottom:16rpx;">一、我们收集的信息</view>

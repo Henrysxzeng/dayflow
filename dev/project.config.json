@@ -1,9 +1,9 @@
 {
-  "description": "DayFlow - AI每日任务调度助手",
+  "description": "FlowCast - AI每日任务调度助手",
   "compileType": "miniprogram",
   "libVersion": "3.4.3",
   "appid": "wxd0de3ba5bb35cb1d",
-  "projectname": "DayFlow",
+  "projectname": "FlowCast",
   "setting": {
     "coverView": true,
     "es6": true,
