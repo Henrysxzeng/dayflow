@@ -4,6 +4,14 @@
 # 微信开发者工具生成的私有配置
 project.private.config.json
 
+# 无关文件
+resources/
+*.jpg
+*.jpg-lx2
+*.png
+头像*
+*.png
+
 # Node modules（云函数依赖，云端安装）
 cloudfunctions/*/node_modules/
 node_modules/
