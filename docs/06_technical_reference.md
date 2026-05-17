@@ -82,158 +82,307 @@ DayFlow/
 
 ## 三、数据库设计（8个集合）
 
+**权限总览：**
+- `users / tasks / daily_plans / daily_logs / push_auth / weekly_summaries / challenge_participants`：仅创建者可读写
+- `monthly_challenges`：所有用户可读，仅管理端可写
+- 云函数始终以管理员权限运行，权限设置仅影响小程序端直接访问（本项目不使用直接访问）
+
+---
+
 ### 3.1 `users` — 用户主表
+
+每个用户一条记录，`_id` = 微信 openid。
 
 ```javascript
 {
-  _id: "openid_xxxxx",           // 微信 openid，作为主键
+  _id: "openid_xxxxx",                    // String，微信 openid，主键
+
+  // 用户设置
   settings: {
-    wake_time: "08:00",          // 推送时间
-    default_daily_hours: 4,      // 默认可用时长
-    ai_tone: "friendly"          // friendly | strict | snarky
+    wake_time: "08:00",                   // String，晨间推送时间，格式 "HH:MM"
+    default_daily_hours: 4,               // Number，默认可用时长（小时）
+    ai_tone: "friendly"                   // String，AI语气：friendly | strict | snarky
   },
+
+  // Streak 系统
   streak: {
-    current: 12,                 // 当前连续天数
-    longest: 25,                 // 历史最长
-    last_active_date: "2026-05-17", // 最后活跃日期（YYYY-MM-DD）
-    jokers_remaining: 1          // 免死金牌剩余次数
+    current: 12,                          // Number，当前连续天数
+    longest: 25,                          // Number，历史最长连续天数
+    last_active_date: "2026-05-17",       // String，最后活跃日期 YYYY-MM-DD
+    jokers_remaining: 1                   // Number，剩余免死金牌次数（默认1张）
   },
-  total_completed: 47,           // 累计完成任务数
-  achievements: ["first_complete", "streak_7"],  // 已解锁成就ID数组
-  pending_achievements: [],      // 待弹窗展示的新成就（展示后清空）
-  pending_failure_tags: [        // 待用户标记原因的未完成任务
-    { task_id: "xxx", task_title: "xxx", date: "2026-05-17" }
+
+  // 任务统计
+  total_completed: 47,                    // Number，累计完成任务总数（用于成就检查）
+
+  // 成就系统
+  achievements: [                         // Array<String>，已解锁成就ID列表
+    "first_complete",                     // 可能的值见下方成就ID表
+    "streak_7"
   ],
-  next_week_note: "下周重点：完成期末报告", // 周五预载备注
-  is_new_user: false,
+  pending_achievements: [                 // Array<Object>，待弹窗展示的新成就（展示后由getUserInfo清空）
+    {
+      id: "streak_7",                     // String，成就ID
+      label: "⚡ 一周战将",               // String，展示标题
+      desc: "连续7天完成计划",             // String，描述
+      unlocked_at: "2026-05-17T..."       // String，ISO时间戳
+    }
+  ],
+
+  // 失败标签队列
+  pending_failure_tags: [                 // Array<Object>，夜间处理后写入，早晨弹窗让用户标原因
+    {
+      task_id: "xxx",                     // String，任务ID
+      task_title: "完成Q2报告",           // String，任务标题（用于展示）
+      date: "2026-05-17"                  // String，未完成的日期
+    }
+  ],
+
+  // 周五预载
+  next_week_note: "下周重点：期末报告",   // String，周五用户填写的下周重点（周一generatePlan读取）
+  next_week_note_updated: Date,           // Date，更新时间
+
+  // 元数据
+  is_new_user: false,                     // Boolean（已废弃，现用任务数量判断）
   created_at: Date,
   updated_at: Date
 }
 ```
 
+**成就ID对照表：**
+
+| ID | 标题 | 触发条件 |
+|----|------|---------|
+| `first_complete` | 🌱 起步 | total_completed === 1 |
+| `tasks_10` | 🎯 十件成就 | total_completed === 10 |
+| `tasks_50` | 💪 效率达人 | total_completed === 50 |
+| `tasks_100` | 🚀 百件英雄 | total_completed === 100 |
+| `streak_3` | 🔥 初燃 | streak.current === 3 |
+| `streak_7` | ⚡ 一周战将 | streak.current === 7 |
+| `streak_30` | 🏆 月度传奇 | streak.current === 30 |
+
+---
+
 ### 3.2 `tasks` — 任务表
+
+用户创建的所有任务，包含历史已完成任务。
 
 ```javascript
 {
-  _id: "auto",
-  user_id: "openid_xxxxx",
-  title: "完成 Q2 报告",
-  description: "包含数据分析部分",
-  deadline: "2026-05-19 17:00",  // 可精确到时间
-  estimated_minutes: 90,
-  importance: 3,                 // 1-4，用户填写
-  urgency: 2,                    // 自动计算
-  quadrant: "Q1",                // Q1-Q4，四象限
-  is_fragment: false,            // true = 碎片任务（≤10分钟）
-  status: "pending",             // pending|in_plan|completed|needs_breakdown|deferred
-  time_accuracy: "more",         // 完成后用户反馈：less|same|more|much_more
-  fail_history: [                // 未完成记录
-    { date: "2026-05-15", reason: "too_hard" }  // too_hard|no_time|dont_want
+  _id: "auto",                            // String，自动生成
+
+  // 基本信息
+  user_id: "openid_xxxxx",               // String，所属用户 openid
+  title: "完成 Q2 报告",                  // String，任务名称
+  description: "包含数据分析部分",         // String，备注（可选）
+  deadline: "2026-05-19 17:00",          // String | null，截止时间（iOS兼容：空格分隔日期时间）
+
+  // 时间估算
+  estimated_minutes: 90,                 // Number，预计用时（分钟）
+  time_accuracy: "more",                 // String | null，完成后用户反馈：less | same | more | much_more
+                                         // 积累10条后generatePlan计算校准系数
+
+  // 优先级
+  importance: 3,                         // Number，重要程度 1-4（用户填写）
+  urgency: 2,                            // Number，紧迫程度 1-4（addTask自动计算）
+  quadrant: "Q1",                        // String，四象限：Q1重要紧急 Q2重要不紧急 Q3紧急不重要 Q4都不重要
+  is_fragment: false,                    // Boolean，true = 碎片任务（≤10分钟），不进主计划
+
+  // 状态
+  status: "pending",                     // String
+                                         //   pending: 待完成
+                                         //   in_plan: 已进入今日计划
+                                         //   completed: 已完成
+                                         //   needs_breakdown: 需要拆解（fail_count≥2且原因为too_hard）
+                                         //   deferred: 降权处理（连续2次dont_want）
+
+  // 失败追踪
+  fail_history: [                        // Array<Object>，每次未完成记录
+    {
+      date: "2026-05-15",               // String，YYYY-MM-DD
+      reason: "too_hard"                 // String：too_hard | no_time | dont_want
+    }
   ],
-  fail_count: 1,
-  parent_task_id: null,          // 非空时为拆解后的子任务
+  fail_count: 1,                         // Number，累计失败次数
+
+  // 拆解关系
+  parent_task_id: null,                  // String | null，非空时为拆解生成的子任务
+
+  // 时间戳
   created_at: Date,
-  completed_at: null
+  completed_at: null                     // Date | null，完成时间
 }
 ```
+
+---
 
 ### 3.3 `daily_plans` — 每日计划表
 
+每个用户每天最多一条记录（用户可重新生成，会覆盖）。
+
 ```javascript
 {
   _id: "auto",
-  user_id: "openid_xxxxx",
-  plan_date: "2026-05-17",       // YYYY-MM-DD
-  available_hours: 3,
-  hours_source: "user_input",    // user_input | default
-  schedule_constraints: "上午10-11点开会", // 用户填写的时间约束
-  selected_task_ids: ["t1","t2","t3"],  // 主计划任务ID数组
-  fragment_task_ids: ["t4","t5"],       // 随手清空任务ID数组
-  busy_slots: [                         // AI识别的忙碌时段
+
+  // 基本信息
+  user_id: "openid_xxxxx",               // String
+  plan_date: "2026-05-17",              // String，YYYY-MM-DD
+
+  // 时间配置
+  available_hours: 3,                    // Number，今日可用小时数
+  hours_source: "user_input",            // String：user_input | default
+  schedule_constraints: "上午10-11点开会", // String，用户填写的时间约束（自然语言）
+
+  // 任务选择
+  selected_task_ids: ["t1","t2","t3"],   // Array<String>，主计划任务ID（有序）
+  fragment_task_ids: ["t4","t5"],        // Array<String>，随手清空任务ID
+
+  // AI生成内容
+  busy_slots: [                          // Array<Object>，AI识别+自动补充的忙碌时段
     { start: "10:00", end: "11:00", label: "开会" },
-    { start: "12:00", end: "13:30", label: "午饭休息" }
+    { start: "12:00", end: "13:30", label: "午饭休息" }  // 自动补充
   ],
-  plan_text: "今天时间紧，先搞定最重要的两件...", // AI生成的今日摘要
-  ai_raw: { ... },               // AI 原始返回（含 main_plan 数组，每项含 suggested_start_time）
-  context: {                     // 生成时的上下文（新鲜开始、完成率、时间校准）
-    freshStart: "今天是周一，新的一周...",
-    recentRate: 73,
-    rateAdvice: "完成率正常，按常规安排",
-    calibrationFactor: 1.3
+  plan_text: "今天先搞定最重要的两件...", // String，AI生成的今日摘要（≤30字）
+  ai_raw: {                              // Object，AI完整返回，包含每个任务的详细安排
+    main_plan: [
+      {
+        task_id: "t1",
+        suggested_minutes: 60,
+        suggested_start_time: "09:00",   // String，HH:MM（有时间约束时必有）
+        suggested_end_time: "10:00",     // String，HH:MM
+        note: "前额叶峰值，复杂分析效率最高"  // String，AI生成的科学注释
+      }
+    ],
+    busy_slots: [...],
+    fragment_plan: ["t4"],
+    summary: "..."
   },
+
+  // 生成上下文（用于调试和分析）
+  context: {
+    freshStart: "今天是周一，新的一周...", // String | null
+    recentRate: 73,                       // Number | null，近7天完成率
+    rateAdvice: "完成率正常，按常规安排",   // String
+    calibrationFactor: 1.3               // Number | null，时间校准系数
+  },
+
+  // 元数据
   generated_at: Date,
-  regenerated_count: 0,
-  next_day_auth: false
+  regenerated_count: 0,                  // Number，当天重新生成次数
+  schedule_constraints: ""               // String，用户输入的时间约束（冗余存储）
 }
 ```
 
+---
+
 ### 3.4 `daily_logs` — 每日执行记录
+
+记录每天的任务执行情况，用于完成率计算和趋势图展示。
 
 ```javascript
 {
   _id: "auto",
   user_id: "openid_xxxxx",
-  log_date: "2026-05-17",
-  tasks_planned: 3,
-  tasks_completed: 2,
-  tasks_deferred: 1,
-  is_rest_day: false,            // true = 用户主动标记的休息日
+  log_date: "2026-05-17",               // String，YYYY-MM-DD
+  tasks_planned: 3,                      // Number，今日计划任务数（注：有时因逻辑问题记录不准，前端已做上限处理）
+  tasks_completed: 2,                    // Number，已完成数（completeTask 每次 +1）
+  tasks_deferred: 1,                     // Number，未完成结转数（nightlyProcess写入）
+  is_rest_day: false,                    // Boolean，true = 用户主动标记的休息日（markRestDay写入）
   created_at: Date
 }
 ```
 
+---
+
 ### 3.5 `push_auth` — 推送授权记录
+
+用户勾选完成任务时授权次日推送，写入此集合。morningPush 查询并标记已使用。
 
 ```javascript
 {
   _id: "auto",
   user_id: "openid_xxxxx",
-  target_date: "2026-05-18",    // 授权用于哪天的推送
-  used: false,                   // 是否已发送
+  target_date: "2026-05-18",            // String，YYYY-MM-DD，授权用于哪天的晨间推送
+  used: false,                           // Boolean，morningPush发送后改为 true
   authorized_at: Date
 }
 ```
 
+---
+
 ### 3.6 `weekly_summaries` — 每周AI总结缓存
+
+每周生成一次，缓存避免重复调用AI。generateWeeklySummary 先查缓存，没有才生成。
 
 ```javascript
 {
   _id: "auto",
   user_id: "openid_xxxxx",
-  week_start: "2026-05-12",
-  week_end: "2026-05-18",
-  summary_text: "这周你完成了23件事...",  // AI生成的总结文本
-  stats: { totalCompleted: 23, totalPlanned: 28, activeDays: 5, restDays: 2, rate: 82 },
+  week_start: "2026-05-12",             // String，YYYY-MM-DD，本周第一天
+  week_end: "2026-05-18",               // String，YYYY-MM-DD，本周最后一天
+  summary_text: "这周你完成了23件事，最高效的一天是周二...", // String，AI生成（≤80字）
+  stats: {                               // Object，生成总结时的统计数据
+    totalCompleted: 23,                  // Number
+    totalPlanned: 28,                    // Number
+    activeDays: 5,                       // Number，有任务完成的天数
+    restDays: 2,                         // Number，标记为休息日的天数
+    rate: 82                             // Number，完成率（上限100）
+  },
   created_at: Date
 }
 ```
 
-### 3.7 `monthly_challenges` — 月度挑战配置（全局共享）
+---
+
+### 3.7 `monthly_challenges` — 月度挑战配置
+
+全局共享数据，每月一条。getChallengeInfo 自动按模板创建当月记录。
 
 ```javascript
 {
   _id: "auto",
-  month_key: "2026-05",
-  title: "五月挑战",
-  desc: "连续14天完成计划",
-  goal_type: "streak",          // streak | tasks（累计任务数）
-  goal_value: 14,
-  start_date: "2026-05-01",
-  end_date: "2026-05-31",
+  month_key: "2026-05",                 // String，YYYY-MM，唯一标识
+  title: "五月挑战",                    // String，挑战标题
+  desc: "连续14天完成计划",              // String，挑战描述
+  goal_type: "streak",                  // String：streak（连续天数）| tasks（累计完成任务数）
+  goal_value: 14,                       // Number，达成目标值
+  start_date: "2026-05-01",            // String，YYYY-MM-DD
+  end_date: "2026-05-31",              // String，YYYY-MM-DD
   created_at: Date
 }
 ```
+
+**各月挑战模板（在 getChallengeInfo 云函数中硬编码）：**
+
+| 月份 | 标题 | 描述 | 类型 | 目标 |
+|------|------|------|------|------|
+| 1月 | 新年挑战 | 连续10天完成计划 | streak | 10 |
+| 2月 | 二月特训 | 完成25件任务 | tasks | 25 |
+| 3月 | 春季冲刺 | 连续12天高效 | streak | 12 |
+| 4月 | 四月加速 | 完成35件任务 | tasks | 35 |
+| 5月 | 五月挑战 | 连续14天完成计划 | streak | 14 |
+| 6月 | 仲夏专注 | 完成40件任务 | tasks | 40 |
+| 7月 | 七月坚持 | 连续15天高效 | streak | 15 |
+| 8月 | 丰收冲刺 | 完成45件任务 | tasks | 45 |
+| 9月 | 金秋挑战 | 连续16天完成计划 | streak | 16 |
+| 10月 | 十月突破 | 完成50件任务 | tasks | 50 |
+| 11月 | 年末冲刺 | 连续18天高效 | streak | 18 |
+| 12月 | 年终传奇 | 完成55件任务 | tasks | 55 |
+
+---
 
 ### 3.8 `challenge_participants` — 挑战参与记录
 
+记录每个用户对每月挑战的参与情况。
+
 ```javascript
 {
   _id: "auto",
   user_id: "openid_xxxxx",
-  month_key: "2026-05",
+  month_key: "2026-05",                 // String，关联 monthly_challenges.month_key
   joined_at: Date,
-  completed: false,
-  completed_at: null
+  completed: false,                      // Boolean，是否已达成目标（当前版本未自动更新，预留字段）
+  completed_at: null                     // Date | null
 }
 ```
 
