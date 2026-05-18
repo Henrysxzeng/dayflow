@@ -115,10 +115,22 @@ const buildUserPrompt = (tasks, availableHours, date, tone, scheduleConstraints,
     ? `\n⚠️ 以下任务今天截止，必须全部出现在 main_plan 中，不能跳过：\n${mustDoToday.map(t => `• "${t.title}"（${t.estimated_minutes}分钟）`).join('\n')}\n如果这些任务加起来超过可用时间，请仍全部安排，并在 summary 中用一句话给出优先级建议（例如"时间紧，先搞定X，Y可以申请延期"），不要因为时间不够而省略今日截止任务。\n`
     : ''
 
+  const currentTimeSection = context.currentTime
+    ? `\n⚠️ 当前实际时间：${context.currentTime}。严禁安排在此时间之前的任务，所有任务必须从 ${context.currentTime} 之后开始。\n`
+    : ''
+
+  const availMinutes = context.alreadyCompletedMinutes > 0
+    ? Math.max(30, availableHours * 60 - context.alreadyCompletedMinutes)
+    : availableHours * 60
+
+  const completedSection = context.alreadyCompletedMinutes > 0
+    ? `\n已完成任务耗时 ${context.alreadyCompletedMinutes} 分钟，剩余可用时间约 ${Math.round(availMinutes / 6) / 10} 小时，请基于剩余时间安排任务。\n`
+    : ''
+
   return `今天日期：${date}
-今日可用时间：${availableHours} 小时
+今日可用时间：${availableHours} 小时（实际剩余：${Math.round(availMinutes / 6) / 10} 小时）
 AI风格：${toneDesc}
-${habitsSection}${freshStartSection}${completionRateSection}${calibrationSection}${lockedSection}${mustDoSection}${constraintSection}
+${habitsSection}${currentTimeSection}${completedSection}${freshStartSection}${completionRateSection}${calibrationSection}${lockedSection}${mustDoSection}${constraintSection}
 待排任务（固定时间任务已单独列出，以下是需要AI安排的任务）：
 ${JSON.stringify(regularTasks.map(t => ({
     id: t._id,
@@ -194,7 +206,7 @@ function callDeepSeek(messages) {
 exports.main = async (event, context) => {
   const wxContext = cloud.getWXContext()
   const openid = wxContext.OPENID
-  const { availableHours = 4, date, scheduleConstraints = '' } = event
+  const { availableHours = 4, date, scheduleConstraints = '', currentTime = null, alreadyCompletedMinutes = 0, keepExistingSlots = false } = event
 
   try {
     const [tasksRes, userRes, logsRes] = await Promise.all([
@@ -252,7 +264,7 @@ exports.main = async (event, context) => {
       }
     } catch (e) { }
 
-    const promptContext = { freshStart, recentRate, rateAdvice, calibrationFactor, schedulePreferences }
+    const promptContext = { freshStart, recentRate, rateAdvice, calibrationFactor, schedulePreferences, currentTime, alreadyCompletedMinutes }
 
     const aiResult = await callDeepSeek([
       { role: 'system', content: SYSTEM_PROMPT },

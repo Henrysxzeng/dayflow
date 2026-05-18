@@ -69,6 +69,8 @@ Page({
     currentAchievement: null,
     // 未规划的今日截止任务
     unplannedUrgentTasks: [],
+    // 已完成任务历史（重排后仍保留显示）
+    completedTasksHistory: [],
     // 分享
     shareImagePath: '',
     // 情绪收集
@@ -338,7 +340,9 @@ Page({
       scheduleConstraints: plan.schedule_constraints || '',
       showRestDay: false, showOnboarding: false, waitingForSchedule: false,
       allTasksDone, allDoneQuote, almostThere,
-      hardestTaskId: hardestTask ? hardestTask._id : null
+      hardestTaskId: hardestTask ? hardestTask._id : null,
+      // 合并已完成任务历史（重排后已完成的仍显示在底部）
+      completedTasksHistory: this._mergeCompletedHistory(mainTasks)
     })
 
     // 有待显示的新任务提示
@@ -353,6 +357,20 @@ Page({
     // 所有计划任务完成后，检测是否还有今日截止但未加入计划的任务
     const plannedIds = plan.selected_task_ids || []
     this._checkUnplannedTodayTasks(plannedIds)
+  },
+
+  _mergeCompletedHistory(mainTasks) {
+    const newDone = mainTasks.filter(function(t) { return t.completed })
+    const existing = this.data.completedTasksHistory || []
+    const map = {}
+    existing.forEach(function(t) { map[t._id] = t })
+    newDone.forEach(function(t) { map[t._id] = t })
+    return Object.values ? Object.values(map) : Object.keys(map).map(function(k) { return map[k] })
+  },
+
+  _getCurrentTime() {
+    const now = new Date()
+    return String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0')
   },
 
   _checkUnplannedTodayTasks(plannedIds) {
@@ -408,14 +426,20 @@ Page({
     this.generatePlan(selectedHoursTemp, '')
   },
 
-  async generatePlan(hours, scheduleConstraints = '', retryCount = 0) {
+  async generatePlan(hours, scheduleConstraints, retryCount, alreadyCompletedMinutes, currentTime) {
+    if (scheduleConstraints === undefined) scheduleConstraints = ''
+    if (retryCount === undefined) retryCount = 0
+    if (alreadyCompletedMinutes === undefined) alreadyCompletedMinutes = 0
+    if (currentTime === undefined) currentTime = null
     this.setData({ generating: true })
     wx.showLoading({ title: 'Flow 规划中...', mask: true })
     try {
       const result = await callCloud('generatePlan', {
         availableHours: hours,
         date: todayString(),
-        scheduleConstraints
+        scheduleConstraints,
+        currentTime: currentTime || this._getCurrentTime(),
+        alreadyCompletedMinutes
       })
       wx.hideLoading()
       if (result && result.plan) {
@@ -562,7 +586,42 @@ Page({
   },
 
   handleRegenerateSame() {
-    this.generatePlan(this.data.availableHours || 4, this.data.scheduleConstraints)
+    const self = this
+    // 计算已完成任务的时长
+    const completedTasks = self.data.mainTasks.filter(function(t) { return t.completed })
+    const completedMinutes = completedTasks.reduce(function(s, t) { return s + (t.suggested_minutes || t.estimated_minutes || 0) }, 0)
+    const currentTime = self._getCurrentTime()
+
+    wx.showModal({
+      title: '重新规划方式',
+      content: '从 ' + currentTime + ' 开始，还有 ' + Math.round((self.data.availableHours * 60 - completedMinutes) / 6) / 10 + ' 小时可用',
+      confirmText: '完全重排',
+      cancelText: '只排新任务',
+      success: function(res) {
+        if (res.confirm) {
+          // 完全重排：保存已完成记录，重新生成所有任务
+          self.generatePlan(self.data.availableHours || 4, self.data.scheduleConstraints, 0, completedMinutes, currentTime)
+        } else {
+          // 只排新任务：已有时段不动，只把未规划任务加进来
+          self._smartInsertUnplanned(completedMinutes, currentTime)
+        }
+      }
+    })
+  },
+
+  _smartInsertUnplanned(completedMinutes, currentTime) {
+    const self = this
+    // 找出未规划的今日截止任务，只对它们重排（保留已有时段作为busy_slots）
+    const existingSlots = self.data.scheduleItems
+      .filter(function(item) { return item.itemType === 'task' && !item.completed && item.suggested_start_time })
+      .map(function(item) { return { start: item.suggested_start_time, end: item.suggested_end_time, label: item.title } })
+
+    const newConstraints = (self.data.scheduleConstraints || '') +
+      (existingSlots.length > 0
+        ? '\n已有任务时段（请勿占用）：' + existingSlots.map(function(s) { return s.start + '-' + s.end }).join('、')
+        : '')
+
+    self.generatePlan(self.data.availableHours || 4, newConstraints, 0, completedMinutes, currentTime)
   },
 
   // ── 任务勾选 ──

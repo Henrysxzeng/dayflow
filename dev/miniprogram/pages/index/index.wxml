@@ -336,8 +336,18 @@
     </view>
 
     <!-- 重新生成 -->
-    <view wx:if="{{planReady}}" bindtap="handleRegenerateSame" style="text-align:center; font-size:24rpx; color:#9CA3AF; margin-bottom:48rpx; padding:16rpx;">
+    <view wx:if="{{planReady}}" bindtap="handleRegenerateSame" style="text-align:center; font-size:24rpx; color:#9CA3AF; margin-bottom:32rpx; padding:16rpx;">
       ↺ 重新生成计划
+    </view>
+
+    <!-- 今日已完成记录（重排后仍保留显示）-->
+    <view wx:if="{{completedTasksHistory.length > 0}}" style="margin-bottom:48rpx;">
+      <view style="font-size:22rpx; color:#9CA3AF; font-weight:600; letter-spacing:2rpx; display:block; margin-bottom:12rpx; text-align:center;">─── 今日已完成 ───</view>
+      <view wx:for="{{completedTasksHistory}}" wx:key="_id" style="padding:16rpx 24rpx; margin-bottom:10rpx; background:#F9FAFB; border-radius:16rpx; opacity:0.6; display:flex; align-items:center;">
+        <text style="font-size:28rpx; color:#16A34A; margin-right:16rpx;">✓</text>
+        <text style="flex:1; font-size:26rpx; color:#6B7280; text-decoration:line-through;">{{item.title}}</text>
+        <text style="font-size:22rpx; color:#9CA3AF;">{{item.durationDisplay}}</text>
+      </view>
     </view>
 
   </block>
