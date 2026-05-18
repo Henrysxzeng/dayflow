@@ -26,7 +26,7 @@ Page({
     moodLogs: [],
     moodSummary: '',
     userType: null,
-    activeProfileTab: 'stats',
+    activeProfileTab: 'stats',  // stats | achieve | settings
     challenge: null,
     challengeHasJoined: false,
     challengeProgress: 0,
