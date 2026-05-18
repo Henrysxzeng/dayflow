@@ -198,8 +198,8 @@
       <text style="font-size:26rpx; color:#1D4ED8; line-height:40rpx;">"{{aiSummary}}"</text>
     </view>
 
-    <!-- 时长选择器（未生成计划时） -->
-    <view wx:if="{{!planReady}}" class="card">
+    <!-- 时长选择器（未生成计划时，且没有已完成任务残留） -->
+    <view wx:if="{{!planReady && !allTasksDone && completedTasksHistory.length === 0}}" class="card">
       <scroll-view scroll-x style="white-space:nowrap; margin-bottom:16rpx;">
         <view
           wx:for="{{hourOptions}}"
@@ -248,7 +248,7 @@
             <text style="font-size:22rpx; color:#B45309; display:block; margin-top:4rpx;">{{unplannedUrgentTasks[0].title}}{{unplannedUrgentTasks.length > 1 ? ' 等' : ''}}</text>
           </view>
         </view>
-        <view bindtap="handleRegenerateSame" style="background:#F59E0B; border-radius:12rpx; padding:12rpx 22rpx; flex-shrink:0;">
+        <view bindtap="handleReplanUnplanned" style="background:#F59E0B; border-radius:12rpx; padding:12rpx 22rpx; flex-shrink:0;">
           <text style="font-size:24rpx; color:#FFF; font-weight:600;">重新规划</text>
         </view>
       </view>
@@ -499,6 +499,17 @@
   <view style="background:#F0FDF4; border-radius:16rpx; padding:28rpx 32rpx; margin-bottom:32rpx; width:100%;">
     <text style="font-size:28rpx; color:#166534; line-height:44rpx;">{{completionMessage}}</text>
   </view>
+  <!-- 今日截止未完成任务提醒 -->
+  <view wx:if="{{unplannedUrgentTasks.length > 0}}" style="background:#FEF3C7; border-radius:16rpx; padding:20rpx 28rpx; margin-bottom:20rpx; width:100%; box-sizing:border-box;">
+    <view class="row">
+      <text style="font-size:28rpx; margin-right:10rpx;">⚠️</text>
+      <view>
+        <text style="font-size:26rpx; font-weight:700; color:#92400E; display:block;">今天还有 {{unplannedUrgentTasks.length}} 个截止任务未安排</text>
+        <text style="font-size:22rpx; color:#B45309; display:block; margin-top:4rpx;">{{unplannedUrgentTasks[0].title}}{{unplannedUrgentTasks.length > 1 ? ' 等' : ''}}</text>
+      </view>
+    </view>
+  </view>
+
   <view class="btn-primary" style="width:100%; margin-bottom:16rpx;" bindtap="handleRequestNextPush">授权明天早 8 点的计划推送</view>
   <!-- 分享今天成绩 -->
   <button open-type="share" style="width:100%; background:#F8FAFF; border:2rpx solid #BFDBFE; border-radius:20rpx; height:88rpx; display:flex; align-items:center; justify-content:center; margin-bottom:16rpx; font-size:28rpx; color:#2563EB; box-sizing:border-box;">

@@ -363,9 +363,10 @@ Page({
     const newDone = mainTasks.filter(function(t) { return t.completed })
     const existing = this.data.completedTasksHistory || []
     const map = {}
-    existing.forEach(function(t) { map[t._id] = t })
-    newDone.forEach(function(t) { map[t._id] = t })
-    return Object.values ? Object.values(map) : Object.keys(map).map(function(k) { return map[k] })
+    existing.forEach(function(t) { if (t._id) map[t._id] = t })
+    newDone.forEach(function(t) { if (t._id) map[t._id] = t })
+    // 不用Object.values，兼容所有微信版本
+    return Object.keys(map).map(function(k) { return map[k] })
   },
 
   _getCurrentTime() {
@@ -585,28 +586,37 @@ Page({
     }
   },
 
+  // 底部"↺ 重新生成计划"按钮：弹两种模式选择
   handleRegenerateSame() {
     const self = this
-    // 计算已完成任务的时长
     const completedTasks = self.data.mainTasks.filter(function(t) { return t.completed })
     const completedMinutes = completedTasks.reduce(function(s, t) { return s + (t.suggested_minutes || t.estimated_minutes || 0) }, 0)
     const currentTime = self._getCurrentTime()
-
+    const hours = parseFloat(self.data.availableHours) || 4
+    const remaining = Math.max(0.5, hours - completedMinutes / 60)
     wx.showModal({
-      title: '重新规划方式',
-      content: '从 ' + currentTime + ' 开始，还有 ' + Math.round((self.data.availableHours * 60 - completedMinutes) / 6) / 10 + ' 小时可用',
+      title: '重新规划',
+      content: '现在 ' + currentTime + '，剩余约 ' + Math.round(remaining * 10) / 10 + ' 小时',
       confirmText: '完全重排',
       cancelText: '插入空档',
       success: function(res) {
         if (res.confirm) {
-          // 完全重排：保存已完成记录，重新生成所有任务
-          self.generatePlan(self.data.availableHours || 4, self.data.scheduleConstraints, 0, completedMinutes, currentTime)
+          self.generatePlan(hours, self.data.scheduleConstraints, 0, completedMinutes, currentTime)
         } else {
-          // 只排新任务：已有时段不动，只把未规划任务加进来
           self._smartInsertUnplanned(completedMinutes, currentTime)
         }
       }
     })
+  },
+
+  // 黄色横幅"重新规划"按钮：直接完全重排，不弹选择框
+  handleReplanUnplanned() {
+    const self = this
+    const completedTasks = self.data.mainTasks.filter(function(t) { return t.completed })
+    const completedMinutes = completedTasks.reduce(function(s, t) { return s + (t.suggested_minutes || t.estimated_minutes || 0) }, 0)
+    const currentTime = self._getCurrentTime()
+    const hours = parseFloat(self.data.availableHours) || 4
+    self.generatePlan(hours, self.data.scheduleConstraints, 0, completedMinutes, currentTime)
   },
 
   _smartInsertUnplanned(completedMinutes, currentTime) {
