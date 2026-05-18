@@ -155,20 +155,34 @@ Page({
     const newTask = getApp().globalData.newTaskForToday
     if (newTask) {
       getApp().globalData.newTaskForToday = null
-      // 新任务通知优先：如果番茄钟正在运行先关掉，避免遮挡弹窗
+      const self = this
+      const task = newTask
+      // 清掉番茄钟覆盖层
       if (this.data.showPomodoro) {
         if (this._pomodoroTimer) { clearInterval(this._pomodoroTimer); this._pomodoroTimer = null }
         this.setData({ showPomodoro: false, pomodoroTaskId: null })
         callCloud('savePomodoroState', { action: 'end' }).catch(function() {})
       }
-      this.setData({
-        pendingNewTaskNotice: newTask,
-        showRestDay: false,
-        showOnboarding: false,
-        waitingForSchedule: false
-      })
-      wx.showLoading({ title: '加载中...', mask: false })
-      this.initPage()
+      // 直接弹modal，跳过复杂的pendingNewTaskNotice流程
+      setTimeout(function() {
+        wx.hideLoading()
+        wx.showModal({
+          title: '已添加"' + task.title + '"',
+          content: '要加入今日计划吗？',
+          confirmText: 'AI重新规划',
+          cancelText: '加到末尾',
+          success: function(res) {
+            var hours = parseFloat(self.data.availableHours) || 4
+            if (res.confirm) {
+              self.generatePlan(hours, self.data.scheduleConstraints)
+            } else {
+              if (task.taskId) {
+                self._appendTaskToTodayPlan(task.taskId)
+              }
+            }
+          }
+        })
+      }, 600)
       return
     }
 
