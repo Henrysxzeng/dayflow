@@ -596,7 +596,7 @@ Page({
       title: '重新规划方式',
       content: '从 ' + currentTime + ' 开始，还有 ' + Math.round((self.data.availableHours * 60 - completedMinutes) / 6) / 10 + ' 小时可用',
       confirmText: '完全重排',
-      cancelText: '只排新任务',
+      cancelText: '插入空档',
       success: function(res) {
         if (res.confirm) {
           // 完全重排：保存已完成记录，重新生成所有任务
