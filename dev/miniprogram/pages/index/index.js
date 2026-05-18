@@ -371,7 +371,9 @@ Page({
 
   _getCurrentTime() {
     const now = new Date()
-    return String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0')
+    const h = now.getHours()
+    const m = now.getMinutes()
+    return (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m
   },
 
   _checkUnplannedTodayTasks(plannedIds) {
