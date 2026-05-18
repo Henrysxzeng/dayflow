@@ -200,18 +200,21 @@ Page({
       this.setData({ streak: result.streak || 0, jokerCount: result.jokers_remaining || 0 })
       if (result.userType) getApp().globalData.userType = result.userType
 
-      // 番茄钟持久化恢复
-      if (result.activePomodoro && !this.data.showPomodoro) {
+      // 番茄钟持久化恢复（新任务通知优先，番茄钟不再打断）
+      if (result.activePomodoro && !this.data.showPomodoro && !this.data.pendingNewTaskNotice) {
         const p = result.activePomodoro
+        const rem = p.remaining || 0
+        const remH = Math.floor(rem / 60)
+        const remM = rem % 60
         this.setData({
           showPomodoro: true,
           pomodoroTaskId: p.task_id,
           pomodoroTaskTitle: p.task_title,
           pomodoroPhase: p.phase || 'focus',
           pomodoroStartTime: p.start_time,
-          pomodoroSeconds: p.remaining,
-          pomodoroDisplay: `${String(Math.floor(p.remaining / 60)).padStart(2, '0')}:${String(p.remaining % 60).padStart(2, '0')}`,
-          pomodoroProgress: 1 - p.remaining / (p.total_seconds || 25 * 60)
+          pomodoroSeconds: rem,
+          pomodoroDisplay: (remH < 10 ? '0' : '') + remH + ':' + (remM < 10 ? '0' : '') + remM,
+          pomodoroProgress: 1 - rem / (p.total_seconds || 25 * 60)
         })
         this._startPomodoroTick()
         wx.hideLoading()

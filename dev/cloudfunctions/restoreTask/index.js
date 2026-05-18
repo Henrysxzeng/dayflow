@@ -12,29 +12,20 @@ exports.main = async (event, context) => {
     const original = taskRes.data
     if (original.user_id !== openid) return { error: 'unauthorized' }
 
-    // 创建恢复后的新任务，保留所有原始数据
-    const newTaskData = {
-      user_id: openid,
-      title: original.title,
-      description: original.description || '',
-      deadline: newDeadline || original.deadline,
-      estimated_minutes: original.estimated_minutes,
-      importance: original.importance,
-      urgency: original.urgency,
-      quadrant: original.quadrant,
-      is_fragment: original.is_fragment,
-      preferred_time: original.preferred_time || null,
-      locked_start_time: original.locked_start_time || null,
-      status: 'pending',
-      fail_history: [],
-      fail_count: 0,
-      restored_from: taskId,
-      created_at: db.serverDate(),
-      completed_at: null
-    }
+    // 直接将原任务恢复为 pending，不创建新任务
+    // 这样已完成列表会移除它，待完成列表会出现它
+    await db.collection('tasks').doc(taskId).update({
+      data: {
+        status: 'pending',
+        completed_at: null,
+        deadline: newDeadline || original.deadline,
+        fail_history: [],
+        fail_count: 0,
+        updated_at: db.serverDate()
+      }
+    })
 
-    const res = await db.collection('tasks').add({ data: newTaskData })
-    return { success: true, newTaskId: res._id }
+    return { success: true, taskId }
   } catch (e) {
     return { error: e.message }
   }
