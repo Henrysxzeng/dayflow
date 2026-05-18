@@ -2,17 +2,16 @@ const { callCloud } = require('../../utils/api')
 const { formatDateDisplay, todayString, minutesToDisplay } = require('../../utils/date')
 
 const HOUR_OPTIONS = [
-  { label: '0.5h', value: 0.5 },
+  { label: '自定义', value: 0 },  // 放第一位，最显眼
   { label: '1h', value: 1 },
   { label: '1.5h', value: 1.5 },
   { label: '2h', value: 2 },
-  { label: '2.5h', value: 2.5 },
   { label: '3h', value: 3 },
-  { label: '3.5h', value: 3.5 },
   { label: '4h', value: 4 },
   { label: '5h', value: 5 },
   { label: '6h', value: 6 },
-  { label: '自定义', value: 0 }
+  { label: '8h', value: 8 },
+  { label: '10h', value: 10 }
 ]
 
 const COMPLETION_MESSAGES = [
@@ -103,7 +102,7 @@ Page({
     customHoursVal: '3',
     customMinsVal: '0',
     hoursPickerRange: [
-      ['0小时','1小时','2小时','3小时','4小时','5小时','6小时'],
+      ['0小时','1小时','2小时','3小时','4小时','5小时','6小时','7小时','8小时','9小时','10小时','11小时','12小时','13小时','14小时','15小时','16小时'],
       ['0分','15分','30分','45分']
     ],
     hoursPickerValue: [3, 0],
@@ -347,16 +346,11 @@ Page({
   },
 
   // ── 时长选择 ──
-  async handleHoursSelect(e) {
+  handleHoursSelect(e) {
     const value = e.currentTarget.dataset.value
     if (value === 0) {
-      wx.showActionSheet({
-        itemList: ['30分钟', '1小时', '1.5小时', '2小时', '2.5小时', '3小时', '4小时', '5小时', '6小时', '8小时'],
-        success: res => {
-          const hours = [0.5, 1, 1.5, 2, 2.5, 3, 4, 5, 6, 8][res.tapIndex]
-          this.setData({ selectedHoursTemp: hours, selectedHours: hours, waitingForSchedule: true, scheduleInput: '' })
-        }
-      })
+      // 自定义：打开滑动弹窗
+      this.setData({ showCustomHoursModal: true, hoursPickerValue: [4, 0] })
       return
     }
     this.setData({ selectedHoursTemp: value, selectedHours: value, waitingForSchedule: true, scheduleInput: '' })
