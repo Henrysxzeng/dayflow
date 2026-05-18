@@ -51,9 +51,9 @@
     </view>
     <scroll-view scroll-x style="white-space:nowrap; margin-bottom:16rpx;">
       <view wx:for="{{durationOptions}}" wx:key="value"
-        class="chip {{!showDurationPicker && form.estimatedMinutes === item.value ? 'active' : (showDurationPicker && item.value === -1 ? 'active' : '')}}"
+        class="chip {{(item.value !== -1 && !durationIsNonStandard && !showDurationPicker && form.estimatedMinutes === item.value) ? 'active' : (item.value === -1 && (showDurationPicker || durationIsNonStandard) ? 'active' : '')}}"
         style="display:inline-flex;" bindtap="handleDurationSelect" data-value="{{item.value}}"
-      >{{item.value === -1 ? durationLabel : item.label}}</view>
+      >{{item.value === -1 ? (durationIsNonStandard && !showDurationPicker ? durationLabel : '自定义') : item.label}}</view>
     </scroll-view>
     <view wx:if="{{showDurationPicker}}" class="card" style="padding:16rpx 24rpx;">
       <picker mode="multiSelector" range="{{durationPickerRange}}" value="{{durationPickerValue}}" bindchange="handleDurationPickerChange" style="width:100%;">

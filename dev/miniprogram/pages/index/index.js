@@ -140,11 +140,8 @@ Page({
     const newTask = getApp().globalData.newTaskForToday
     if (newTask) {
       getApp().globalData.newTaskForToday = null
-      if (this.data.planReady) {
-        setTimeout(() => this._showNewTaskModal(newTask), 400)
-      } else {
-        this.setData({ pendingNewTaskNotice: newTask })
-      }
+      // 无论planReady状态，统一存入pendingNewTaskNotice，由applyPlan或initPage消费
+      this.setData({ pendingNewTaskNotice: newTask })
     }
 
     // 处理从任务列表跳转的番茄钟请求
@@ -235,6 +232,13 @@ Page({
       if (planResult && planResult.plan) {
         this.applyPlan(planResult.plan)
       } else {
+        // 无计划时也要消费 pendingNewTaskNotice
+        const pending = this.data.pendingNewTaskNotice
+        if (pending) {
+          this.setData({ pendingNewTaskNotice: null })
+          setTimeout(() => this._showNewTaskModal(pending), 300)
+          return
+        }
         const tasksResult = await callCloud('getTasks')
         const pendingTasks = (tasksResult.tasks || []).filter(t => t.status !== 'completed')
         if (pendingTasks.length === 0) {

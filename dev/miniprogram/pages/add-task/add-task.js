@@ -159,7 +159,12 @@ Page({
   handleDurationSelect(e) {
     const value = e.currentTarget.dataset.value
     if (value === -1) {
-      this.setData({ showDurationPicker: true })
+      // 打开前先把picker同步到当前estimatedMinutes，避免native picker认为"没改变"不触发bindchange
+      const cur = this.data.form.estimatedMinutes || 30
+      const h = Math.floor(cur / 60)
+      const mList = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55]
+      const mIdx = mList.indexOf(cur % 60) === -1 ? 0 : mList.indexOf(cur % 60)
+      this.setData({ showDurationPicker: true, durationPickerValue: [h, mIdx] })
     } else {
       this._setDuration(value)
       this.setData({ showDurationPicker: false })
