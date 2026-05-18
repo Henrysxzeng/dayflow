@@ -48,17 +48,19 @@
           <text style="font-size:56rpx; margin-right:20rpx;">{{item.avatar_emoji}}</text>
           <view>
             <text style="font-size:30rpx; font-weight:600; color:#111827; display:block;">{{item.display_name}}</text>
-            <view class="row" style="margin-top:6rpx;">
-              <text style="font-size:26rpx; margin-right:6rpx;">{{item.level.emoji}}</text>
-              <text style="font-size:24rpx; color:{{item.level.color}}; font-weight:600;">默契 {{item.chemistry}}</text>
-              <text style="font-size:22rpx; color:#9CA3AF; margin-left:8rpx;">{{item.level.label}}</text>
+            <view style="margin-top:8rpx;">
+              <view class="row">
+                <text style="font-size:26rpx; margin-right:8rpx;">{{item.level.emoji}}</text>
+                <text style="font-size:26rpx; color:{{item.level.color}}; font-weight:700;">{{item.level.label}}</text>
+              </view>
+              <text style="font-size:20rpx; color:#9CA3AF; margin-top:4rpx; display:block;">{{item.level.sublabel}}</text>
             </view>
           </view>
         </view>
         <view style="text-align:right;">
-          <text style="font-size:22rpx; color:#6B7280; display:block;">一起完成</text>
-          <text style="font-size:28rpx; font-weight:700; color:#2563EB;">{{item.shared_tasks_completed}}</text>
-          <text style="font-size:22rpx; color:#6B7280; display:block;">件任务</text>
+          <text style="font-size:22rpx; color:#6B7280; display:block;">共同完成</text>
+          <text style="font-size:32rpx; font-weight:700; color:#2563EB;">{{item.shared_tasks_completed}}</text>
+          <text style="font-size:22rpx; color:#6B7280; display:block;">件</text>
         </view>
       </view>
       <!-- 默契度进度条 -->
@@ -66,9 +68,14 @@
         <view style="background:#F3F4F6; border-radius:8rpx; height:8rpx; overflow:hidden;">
           <view style="background:{{item.level.color}}; height:100%; width:{{item.chemistry >= 100 ? 100 : item.chemistry}}%; border-radius:8rpx;"></view>
         </view>
-        <view class="row-between" style="margin-top:6rpx;">
-          <text style="font-size:18rpx; color:#9CA3AF;">{{item.chemistry}} 默契</text>
-          <text style="font-size:18rpx; color:#9CA3AF;">{{item.chemistry < 10 ? '再完成' + (10-item.chemistry) + '件解锁🔥' : (item.chemistry < 30 ? '再' + (30-item.chemistry) + '件解锁❤️' : (item.chemistry < 60 ? '再' + (60-item.chemistry) + '件解锁💎' : (item.chemistry < 100 ? '再' + (100-item.chemistry) + '件解锁🌊' : '已达到最高默契！')))}}</text>
+        <view class="row-between" style="margin-top:8rpx;">
+          <text style="font-size:20rpx; color:#9CA3AF; font-weight:600; color:{{item.level.color}};">{{item.chemistry}} 默契值</text>
+          <text style="font-size:18rpx; color:#9CA3AF;">
+            {{item.chemistry < 10 ? '再' + (10-item.chemistry) + '件 → 志趣相投🔥' :
+              (item.chemistry < 30 ? '再' + (30-item.chemistry) + '件 → 灵犀暗通✨' :
+              (item.chemistry < 60 ? '再' + (60-item.chemistry) + '件 → 默契十足💎' :
+              (item.chemistry < 100 ? '再' + (100-item.chemistry) + '件 → 心流共振🌊' : '已达满级 ✦')))}}
+          </text>
         </view>
       </view>
     </view>

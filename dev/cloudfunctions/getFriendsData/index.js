@@ -3,11 +3,11 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 
 const chemistryLevel = (score) => {
-  if (score >= 100) return { emoji: '🌊', label: '心流共振', color: '#2563EB' }
-  if (score >= 60) return { emoji: '💎', label: '默契十足', color: '#7C3AED' }
-  if (score >= 30) return { emoji: '❤️', label: '好友', color: '#DC2626' }
-  if (score >= 10) return { emoji: '🔥', label: '升温中', color: '#D97706' }
-  return { emoji: '🌱', label: '刚认识', color: '#16A34A' }
+  if (score >= 100) return { emoji: '🌊', label: '心流共振', sublabel: '满级·极致同频', color: '#2563EB' }
+  if (score >= 60)  return { emoji: '💎', label: '默契十足', sublabel: '高阶·高度契合', color: '#7C3AED' }
+  if (score >= 30)  return { emoji: '✨', label: '灵犀暗通', sublabel: '中阶·渐有感应', color: '#DC2626' }
+  if (score >= 10)  return { emoji: '🔥', label: '志趣相投', sublabel: '初阶·彼此合拍', color: '#D97706' }
+  return { emoji: '🌱', label: '初识投缘', sublabel: '入门·初见好感', color: '#16A34A' }
 }
 
 exports.main = async (event, context) => {
