@@ -25,6 +25,7 @@ Page({
     activeDays: 0,
     moodLogs: [],
     moodSummary: '',
+    activeProfileTab: 'stats',
     challenge: null,
     challengeHasJoined: false,
     challengeProgress: 0,
@@ -109,6 +110,10 @@ Page({
     } catch (e) {
       this.setData({ loadingSummary: false })
     }
+  },
+
+  switchProfileTab(e) {
+    this.setData({ activeProfileTab: e.currentTarget.dataset.tab })
   },
 
   handleToneSelect(e) {

@@ -1,253 +1,51 @@
 <view class="page-container">
 
-  <!-- 用户信息 -->
-  <view class="card row" style="margin-top:24rpx; margin-bottom:32rpx;">
+  <!-- 用户信息（始终显示） -->
+  <view class="card row" style="margin-top:24rpx; margin-bottom:24rpx;">
     <view style="width:96rpx; height:96rpx; border-radius:48rpx; background:#EFF6FF; display:flex; align-items:center; justify-content:center; margin-right:28rpx;">
       <text style="font-size:48rpx;">🌊</text>
     </view>
-    <view>
+    <view class="flex-1">
       <text style="font-size:32rpx; font-weight:600; color:#111827;">Flow 用户</text>
       <text style="display:block; font-size:24rpx; color:#6B7280; margin-top:8rpx;">本周完成 {{totalCompleted}} 件</text>
     </view>
-    <view style="margin-left:auto; text-align:center;">
+    <view style="text-align:center;">
       <text style="display:block; font-size:48rpx; font-weight:700; color:#F97316;">{{streak}}</text>
       <text style="font-size:20rpx; color:#6B7280;">连续天</text>
     </view>
   </view>
 
-  <!-- 分层解锁系统 -->
-  <view style="margin-bottom:32rpx;">
-    <text style="font-size:24rpx; color:#6B7280; font-weight:600; letter-spacing:2rpx; display:block; margin-bottom:8rpx;">个人成长路径</text>
-    <text style="font-size:22rpx; color:#9CA3AF; display:block; margin-bottom:16rpx;">条件基于真实使用质量，无法通过刷任务触发</text>
-    <view class="card" style="padding:28rpx;">
+  <!-- 子 Tab 切换 -->
+  <view class="row" style="background:#FFF; border-radius:20rpx; padding:8rpx; margin-bottom:28rpx; box-shadow:0 1rpx 4rpx rgba(0,0,0,0.06);">
+    <view bindtap="switchProfileTab" data-tab="stats" style="flex:1; text-align:center; padding:16rpx 0; border-radius:16rpx; background:{{activeProfileTab === 'stats' ? '#2563EB' : 'transparent'}};">
+      <text style="font-size:28rpx; font-weight:{{activeProfileTab === 'stats' ? '600' : '400'}}; color:{{activeProfileTab === 'stats' ? '#FFF' : '#6B7280'}};">📊 统计</text>
+    </view>
+    <view bindtap="switchProfileTab" data-tab="settings" style="flex:1; text-align:center; padding:16rpx 0; border-radius:16rpx; background:{{activeProfileTab === 'settings' ? '#2563EB' : 'transparent'}};">
+      <text style="font-size:28rpx; font-weight:{{activeProfileTab === 'settings' ? '600' : '400'}}; color:{{activeProfileTab === 'settings' ? '#FFF' : '#6B7280'}};">⚙️ 设置</text>
+    </view>
+  </view>
 
-      <!-- ─── 第一章 ─── -->
-      <view style="margin-bottom:28rpx;">
-        <view class="row-between" style="margin-bottom:12rpx;">
-          <view class="row">
-            <text style="font-size:28rpx; margin-right:12rpx;">{{unlockLevel >= 1 ? '✅' : '🔒'}}</text>
-            <view>
-              <text style="font-size:28rpx; font-weight:700; color:#111827;">第一章：起步</text>
-              <text style="font-size:20rpx; color:#9CA3AF; display:block;">累计 5 天有真实完成记录</text>
-            </view>
-          </view>
-          <text wx:if="{{unlockLevel >= 1}}" style="font-size:22rpx; color:#16A34A; font-weight:600;">已解锁</text>
-        </view>
-        <!-- 解锁内容（始终可见） -->
-        <view style="background:#F8FAFF; border-radius:12rpx; padding:20rpx 24rpx; margin-bottom:12rpx;">
-          <text style="font-size:22rpx; color:#6B7280; display:block; margin-bottom:8rpx;">解锁后获得：</text>
-          <text style="font-size:24rpx; color:#374151; display:block; line-height:36rpx;">📊 你最常拖延哪类任务的初步分析</text>
-          <text style="font-size:24rpx; color:#374151; display:block; line-height:36rpx;">😊 情绪趋势图（看心情与效率的关系）</text>
-          <text style="font-size:24rpx; color:#374151; display:block; line-height:36rpx;">🏆 完整成就系统（7个里程碑全部激活）</text>
-        </view>
-        <!-- 进度 -->
-        <view wx:if="{{unlockLevel < 1}}">
-          <view class="row-between" style="margin-bottom:6rpx;">
-            <text style="font-size:20rpx; color:#6B7280;">有效活跃天 {{unlockProgress.l1.days}}/5</text>
-            <text style="font-size:20rpx; color:#2563EB;">{{unlockProgress.l1.pct}}%</text>
-          </view>
-          <view style="background:#F3F4F6; border-radius:8rpx; height:10rpx; overflow:hidden;">
-            <view style="background:#2563EB; height:100%; width:{{unlockProgress.l1.pct}}%; border-radius:8rpx;"></view>
-          </view>
-        </view>
-      </view>
+  <!-- ══════════ 统计 Tab ══════════ -->
+  <block wx:if="{{activeProfileTab === 'stats'}}">
 
-      <view style="height:1rpx; background:#F3F4F6; margin-bottom:28rpx;"></view>
-
-      <!-- ─── 第二章 ─── -->
-      <view style="margin-bottom:28rpx;">
-        <view class="row-between" style="margin-bottom:12rpx;">
-          <view class="row">
-            <text style="font-size:28rpx; margin-right:12rpx;">{{unlockLevel >= 2 ? '✅' : '🔒'}}</text>
-            <view>
-              <text style="font-size:28rpx; font-weight:700; color:#111827;">第二章：深入</text>
-              <text style="font-size:20rpx; color:#9CA3AF; display:block;">12天使用 + 5次记录实际用时</text>
-            </view>
-          </view>
-          <text wx:if="{{unlockLevel >= 2}}" style="font-size:22rpx; color:#16A34A; font-weight:600;">已解锁</text>
-        </view>
-        <!-- 解锁内容（始终可见） -->
-        <view style="background:#F8FAFF; border-radius:12rpx; padding:20rpx 24rpx; margin-bottom:12rpx;">
-          <text style="font-size:22rpx; color:#6B7280; display:block; margin-bottom:8rpx;">解锁后获得：</text>
-          <text style="font-size:24rpx; color:#374151; display:block; line-height:36rpx;">⏱️ 时间校准分析（你平均低估多少%，AI自动补偿）</text>
-          <text style="font-size:24rpx; color:#374151; display:block; line-height:36rpx;">⚡ 你的专属能量曲线（哪个时段你最高效）</text>
-          <text style="font-size:24rpx; color:#374151; display:block; line-height:36rpx;">📝 更深度的每周AI总结（指出具体规律）</text>
-        </view>
-        <!-- 进度（未解锁时显示两个条件进度）-->
-        <view wx:if="{{unlockLevel < 2}}">
-          <view style="margin-bottom:10rpx;">
-            <view class="row-between" style="margin-bottom:4rpx;">
-              <text style="font-size:20rpx; color:#6B7280;">有效活跃天 {{unlockProgress.l2.days}}/12</text>
-              <text style="font-size:20rpx; color:#2563EB;">{{unlockProgress.l2.daysPct}}%</text>
-            </view>
-            <view style="background:#F3F4F6; border-radius:8rpx; height:8rpx; overflow:hidden;">
-              <view style="background:#2563EB; height:100%; width:{{unlockProgress.l2.daysPct}}%; border-radius:8rpx;"></view>
-            </view>
-          </view>
-          <view>
-            <view class="row-between" style="margin-bottom:4rpx;">
-              <text style="font-size:20rpx; color:#6B7280;">完成任务后记录实际用时 {{unlockProgress.l2.cals}}/5</text>
-              <text style="font-size:20rpx; color:#2563EB;">{{unlockProgress.l2.calsPct}}%</text>
-            </view>
-            <view style="background:#F3F4F6; border-radius:8rpx; height:8rpx; overflow:hidden;">
-              <view style="background:#2563EB; height:100%; width:{{unlockProgress.l2.calsPct}}%; border-radius:8rpx;"></view>
-            </view>
-          </view>
-          <text style="font-size:20rpx; color:#9CA3AF; margin-top:8rpx; display:block;">两个条件都满足才解锁</text>
-        </view>
-      </view>
-
-      <view style="height:1rpx; background:#F3F4F6; margin-bottom:28rpx;"></view>
-
-      <!-- ─── 第三章 ─── -->
+    <!-- 分享本月成绩 -->
+    <button open-type="share" style="background:#1E3A8A; border-radius:20rpx; padding:28rpx 32rpx; margin-bottom:28rpx; display:flex; align-items:center; justify-content:space-between; width:100%; box-sizing:border-box; text-align:left;">
       <view>
-        <view class="row-between" style="margin-bottom:12rpx;">
-          <view class="row">
-            <text style="font-size:28rpx; margin-right:12rpx;">{{unlockLevel >= 3 ? '🌊' : '🔒'}}</text>
-            <view>
-              <text style="font-size:28rpx; font-weight:700; color:#111827;">第三章：传奇</text>
-              <text style="font-size:20rpx; color:#9CA3AF; display:block;">22天使用 + 历史最长Streak达7天</text>
-            </view>
-          </view>
-          <text wx:if="{{unlockLevel >= 3}}" style="font-size:22rpx; color:#2563EB; font-weight:700;">🌊 心流达人</text>
-        </view>
-        <!-- 解锁内容（始终可见） -->
-        <view style="background:#F8FAFF; border-radius:12rpx; padding:20rpx 24rpx; margin-bottom:12rpx;">
-          <text style="font-size:22rpx; color:#6B7280; display:block; margin-bottom:8rpx;">解锁后获得：</text>
-          <text style="font-size:24rpx; color:#374151; display:block; line-height:36rpx;">🧠 完整个人洞察报告（AI分析你专属的效率规律）</text>
-          <text style="font-size:24rpx; color:#374151; display:block; line-height:36rpx;">🎁 月度Wrapped（可分享的专属成绩卡）</text>
-          <text style="font-size:24rpx; color:#374151; display:block; line-height:36rpx;">🌊 专属成就"心流达人"徽章</text>
-          <text style="font-size:24rpx; color:#374151; display:block; line-height:36rpx;">🎯 个性化推送（根据你的习惯调整提醒内容）</text>
-        </view>
-        <!-- 进度（两个条件）-->
-        <view wx:if="{{unlockLevel < 3}}">
-          <view style="margin-bottom:10rpx;">
-            <view class="row-between" style="margin-bottom:4rpx;">
-              <text style="font-size:20rpx; color:#6B7280;">有效活跃天 {{unlockProgress.l3.days}}/22</text>
-              <text style="font-size:20rpx; color:#2563EB;">{{unlockProgress.l3.daysPct}}%</text>
-            </view>
-            <view style="background:#F3F4F6; border-radius:8rpx; height:8rpx; overflow:hidden;">
-              <view style="background:#2563EB; height:100%; width:{{unlockProgress.l3.daysPct}}%; border-radius:8rpx;"></view>
-            </view>
-          </view>
-          <view>
-            <view class="row-between" style="margin-bottom:4rpx;">
-              <text style="font-size:20rpx; color:#6B7280;">历史最长Streak {{unlockProgress.l3.streak}}/7天</text>
-              <text style="font-size:20rpx; color:#2563EB;">{{unlockProgress.l3.streakPct}}%</text>
-            </view>
-            <view style="background:#F3F4F6; border-radius:8rpx; height:8rpx; overflow:hidden;">
-              <view style="background:#F97316; height:100%; width:{{unlockProgress.l3.streakPct}}%; border-radius:8rpx;"></view>
-            </view>
-          </view>
-          <text style="font-size:20rpx; color:#9CA3AF; margin-top:8rpx; display:block;">两个条件都满足才解锁</text>
-        </view>
+        <text style="font-size:28rpx; font-weight:600; color:#FFF; display:block;">分享本月成绩</text>
+        <text style="font-size:22rpx; color:rgba(255,255,255,0.6); margin-top:4rpx; display:block;">完成 {{totalCompleted}} 件 · 连续 {{streak}} 天</text>
       </view>
+      <text style="font-size:40rpx;">📤</text>
+    </button>
 
+    <!-- 每周 AI 总结 -->
+    <view wx:if="{{weeklySummary || loadingSummary}}" style="margin-bottom:28rpx; background:#EFF6FF; border-radius:20rpx; padding:28rpx 32rpx;">
+      <text style="font-size:22rpx; color:#6B7280; display:block; margin-bottom:10rpx;">Flow 的本周总结</text>
+      <view wx:if="{{loadingSummary}}" style="color:#6B7280; font-size:26rpx;">生成中...</view>
+      <text wx:else style="font-size:28rpx; color:#1D4ED8; line-height:44rpx;">{{weeklySummary}}</text>
     </view>
-  </view>
 
-  <!-- 情绪趋势（第一章解锁后显示）-->
-  <view wx:if="{{unlockLevel >= 1}}" style="margin-bottom:32rpx;">
-    <text style="font-size:24rpx; color:#6B7280; font-weight:600; letter-spacing:2rpx; display:block; margin-bottom:16rpx;">近期情绪</text>
-    <view class="card">
-      <view wx:if="{{moodLogs.length === 0}}" style="text-align:center; padding:24rpx 0; color:#9CA3AF; font-size:26rpx;">
-        完成任务后标记情绪，数据将在这里展示
-      </view>
-      <view wx:else class="row" style="justify-content:space-around;">
-        <view wx:for="{{moodLogs}}" wx:key="date" style="text-align:center;">
-          <text style="font-size:40rpx; display:block; margin-bottom:8rpx;">{{item.emoji}}</text>
-          <text style="font-size:20rpx; color:#9CA3AF;">{{item.date.slice(5)}}</text>
-        </view>
-      </view>
-    </view>
-  </view>
-
-  <!-- 社区月度挑战 -->
-  <view wx:if="{{challenge}}" style="margin-bottom:32rpx;">
-    <text style="font-size:24rpx; color:#6B7280; font-weight:600; letter-spacing:2rpx; display:block; margin-bottom:16rpx;">本月社区挑战</text>
-    <view class="card" style="{{challengeCompleted ? 'background:#F0FDF4; border:2rpx solid #BBF7D0;' : ''}}">
-      <view class="row-between" style="margin-bottom:16rpx;">
-        <view>
-          <text style="font-size:28rpx; font-weight:700; color:#111827; display:block;">🏆 {{challenge.title}}</text>
-          <text style="font-size:24rpx; color:#6B7280; margin-top:4rpx; display:block;">{{challenge.desc}}</text>
-        </view>
-        <text wx:if="{{challengeCompleted}}" style="font-size:24rpx; color:#16A34A; font-weight:600;">已完成✓</text>
-        <text wx:elif="{{challengeDaysLeft > 0}}" style="font-size:22rpx; color:#9CA3AF;">剩{{challengeDaysLeft}}天</text>
-      </view>
-
-      <!-- 进度条 -->
-      <view wx:if="{{challengeHasJoined}}" style="margin-bottom:16rpx;">
-        <view class="row-between" style="margin-bottom:8rpx;">
-          <text style="font-size:22rpx; color:#6B7280;">进度 {{challengeProgress}}/{{challenge.goal_value}}</text>
-          <text style="font-size:22rpx; color:#2563EB;">{{challengeProgressPct}}%</text>
-        </view>
-        <view style="background:#F3F4F6; border-radius:8rpx; height:12rpx; overflow:hidden;">
-          <view style="background:{{challengeCompleted ? '#16A34A' : '#2563EB'}}; height:100%; width:{{challengeProgressPct}}%; border-radius:8rpx;"></view>
-        </view>
-      </view>
-
-      <!-- 参与人数 -->
-      <view class="row-between" style="margin-top:16rpx;">
-        <text style="font-size:22rpx; color:#6B7280;">👥 {{challengeParticipants}} 人参与</text>
-        <view wx:if="{{!challengeHasJoined}}" class="btn-primary" style="height:64rpx; padding:0 32rpx; font-size:26rpx;" bindtap="handleJoinChallenge">加入挑战</view>
-        <text wx:else style="font-size:22rpx; color:#16A34A; font-weight:600;">✓ 已参与</text>
-      </view>
-    </view>
-  </view>
-
-  <!-- 分享本月成绩：必须用 button open-type="share" -->
-  <button open-type="share" style="background:#1E3A8A; border-radius:20rpx; padding:32rpx; margin-bottom:32rpx; display:flex; align-items:center; justify-content:space-between; width:100%; box-sizing:border-box; text-align:left;">
-    <view>
-      <text style="font-size:28rpx; font-weight:600; color:#FFF; display:block;">分享本月成绩</text>
-      <text style="font-size:22rpx; color:rgba(255,255,255,0.6); margin-top:6rpx; display:block;">完成 {{totalCompleted}} 件 · 连续 {{streak}} 天</text>
-    </view>
-    <text style="font-size:40rpx;">📤</text>
-  </button>
-
-  <!-- 每周 AI 总结 -->
-  <view wx:if="{{weeklySummary || loadingSummary}}" style="margin-bottom:32rpx; background:#EFF6FF; border-radius:20rpx; padding:32rpx;">
-    <text style="font-size:22rpx; color:#6B7280; display:block; margin-bottom:12rpx;">Flow 的本周总结</text>
-    <view wx:if="{{loadingSummary}}" style="color:#6B7280; font-size:26rpx;">生成中...</view>
-    <text wx:else style="font-size:28rpx; color:#1D4ED8; line-height:44rpx;">{{weeklySummary}}</text>
-  </view>
-
-  <!-- 成就徽章 -->
-  <view wx:if="{{achievements.length > 0}}" style="margin-bottom:32rpx;">
-    <text style="font-size:24rpx; color:#6B7280; font-weight:600; letter-spacing:2rpx; display:block; margin-bottom:16rpx;">成就</text>
-    <view class="card">
-      <view style="display:flex; flex-wrap:wrap; gap:16rpx;">
-        <view wx:for="{{achievementBadges}}" wx:key="id" style="background:#F9FAFB; border-radius:12rpx; padding:16rpx 20rpx; display:flex; align-items:center;">
-          <text style="font-size:32rpx; margin-right:8rpx;">{{item.emoji}}</text>
-          <text style="font-size:22rpx; color:#374151;">{{item.name}}</text>
-        </view>
-      </view>
-    </view>
-  </view>
-
-  <!-- 七日完成率趋势 -->
-  <view style="margin-bottom:32rpx;">
-    <text style="font-size:24rpx; color:#6B7280; font-weight:600; letter-spacing:2rpx; display:block; margin-bottom:20rpx;">近 7 日完成率</text>
-    <view class="card" style="padding:32rpx 24rpx;">
-      <view class="row" style="align-items:flex-end; justify-content:space-between; height:140rpx;">
-        <view
-          wx:for="{{chartBars}}"
-          wx:key="date"
-          style="display:flex; flex-direction:column; align-items:center; flex:1;"
-        >
-          <view style="width:100%; display:flex; flex-direction:column; justify-content:flex-end; height:100rpx; padding:0 4rpx;">
-            <view style="background:{{item.isRestDay ? '#D1FAE5' : (item.rate >= 80 ? '#2563EB' : (item.rate >= 50 ? '#93C5FD' : '#E5E7EB'))}}; border-radius:6rpx; height:{{item.rate}}rpx; min-height:{{item.rate > 0 ? 8 : 0}}rpx; width:100%;"></view>
-          </view>
-          <text style="font-size:18rpx; color:#9CA3AF; margin-top:8rpx;">{{item.date}}</text>
-          <text style="font-size:18rpx; color:{{item.rate >= 80 ? '#2563EB' : '#9CA3AF'}};">{{item.isRestDay ? '休' : (item.rate > 0 ? item.rate + '%' : '-')}}</text>
-        </view>
-      </view>
-    </view>
-  </view>
-
-  <!-- 本周数据 -->
-  <view style="margin-bottom:32rpx;">
-    <text style="font-size:24rpx; color:#6B7280; font-weight:600; letter-spacing:2rpx; display:block; margin-bottom:16rpx;">本周数据</text>
-    <view class="card">
+    <!-- 本周数据 -->
+    <view class="card" style="margin-bottom:28rpx;">
       <view class="row" style="justify-content:space-around; text-align:center;">
         <view>
           <text style="display:block; font-size:48rpx; font-weight:700; color:#2563EB;">{{weekStats.completed}}</text>
@@ -265,59 +63,252 @@
         </view>
       </view>
     </view>
-  </view>
 
-  <!-- 时间校准分析 -->
-  <view style="margin-bottom:32rpx;">
-    <text style="font-size:24rpx; color:#6B7280; font-weight:600; letter-spacing:2rpx; display:block; margin-bottom:16rpx;">时间校准分析</text>
-    <view class="card">
-      <view wx:if="{{calibrationUnlocked}}">
-        <view class="row" style="margin-bottom:16rpx;">
-          <text style="font-size:40rpx; margin-right:16rpx;">🔬</text>
-          <view>
-            <text style="font-size:28rpx; font-weight:600; color:#111827; display:block;">已解锁</text>
-            <text style="font-size:22rpx; color:#6B7280;">基于 {{calibrationDataPoints}} 个真实用时数据</text>
+    <!-- 七日完成率趋势 -->
+    <view style="margin-bottom:28rpx;">
+      <text style="font-size:24rpx; color:#6B7280; font-weight:600; display:block; margin-bottom:16rpx;">近 7 日完成率</text>
+      <view class="card" style="padding:28rpx 20rpx;">
+        <view class="row" style="align-items:flex-end; justify-content:space-between; height:140rpx;">
+          <view wx:for="{{chartBars}}" wx:key="date" style="display:flex; flex-direction:column; align-items:center; flex:1;">
+            <view style="width:100%; display:flex; flex-direction:column; justify-content:flex-end; height:100rpx; padding:0 4rpx;">
+              <view style="background:{{item.isRestDay ? '#D1FAE5' : (item.rate >= 80 ? '#2563EB' : (item.rate >= 50 ? '#93C5FD' : '#E5E7EB'))}}; border-radius:6rpx; height:{{item.rate}}rpx; min-height:{{item.rate > 0 ? 8 : 0}}rpx; width:100%;"></view>
+            </view>
+            <text style="font-size:18rpx; color:#9CA3AF; margin-top:6rpx;">{{item.date}}</text>
+            <text style="font-size:18rpx; color:{{item.rate >= 80 ? '#2563EB' : '#9CA3AF'}};">{{item.isRestDay ? '休' : (item.rate > 0 ? item.rate + '%' : '-')}}</text>
           </view>
         </view>
-        <text style="font-size:26rpx; color:#374151; line-height:40rpx;">Flow 正在根据你的真实用时习惯优化未来的时间预估，让计划更贴合你的节奏。</text>
       </view>
-      <view wx:else>
-        <view class="row" style="margin-bottom:16rpx;">
-          <text style="font-size:40rpx; margin-right:16rpx;">🔒</text>
-          <view>
-            <text style="font-size:28rpx; font-weight:600; color:#111827; display:block;">时间校准分析</text>
-            <text style="font-size:22rpx; color:#6B7280;">{{calibrationDataPoints}}/10 个数据点</text>
+    </view>
+
+    <!-- 个人成长路径 -->
+    <view style="margin-bottom:28rpx;">
+      <text style="font-size:24rpx; color:#6B7280; font-weight:600; display:block; margin-bottom:6rpx;">个人成长路径</text>
+      <text style="font-size:22rpx; color:#9CA3AF; display:block; margin-bottom:14rpx;">条件基于真实使用质量，无法通过刷任务触发</text>
+      <view class="card" style="padding:28rpx;">
+
+        <!-- 第一章 -->
+        <view style="margin-bottom:28rpx;">
+          <view class="row-between" style="margin-bottom:12rpx;">
+            <view class="row">
+              <text style="font-size:28rpx; margin-right:12rpx;">{{unlockLevel >= 1 ? '✅' : '🔒'}}</text>
+              <view>
+                <text style="font-size:28rpx; font-weight:700; color:#111827;">第一章：起步</text>
+                <text style="font-size:20rpx; color:#9CA3AF; display:block;">累计 5 天有真实完成记录</text>
+              </view>
+            </view>
+            <text wx:if="{{unlockLevel >= 1}}" style="font-size:22rpx; color:#16A34A; font-weight:600;">已解锁</text>
+          </view>
+          <view style="background:#F8FAFF; border-radius:12rpx; padding:18rpx 22rpx; margin-bottom:12rpx;">
+            <text style="font-size:22rpx; color:#374151; display:block; line-height:36rpx;">📊 拖延规律初步分析</text>
+            <text style="font-size:22rpx; color:#374151; display:block; line-height:36rpx;">😊 情绪与效率趋势图</text>
+            <text style="font-size:22rpx; color:#374151; display:block; line-height:36rpx;">🏆 完整成就系统</text>
+          </view>
+          <view wx:if="{{unlockLevel < 1}}">
+            <view class="row-between" style="margin-bottom:4rpx;">
+              <text style="font-size:20rpx; color:#6B7280;">有效活跃天 {{unlockProgress.l1.days}}/5</text>
+              <text style="font-size:20rpx; color:#2563EB;">{{unlockProgress.l1.pct}}%</text>
+            </view>
+            <view style="background:#F3F4F6; border-radius:8rpx; height:10rpx; overflow:hidden;">
+              <view style="background:#2563EB; height:100%; width:{{unlockProgress.l1.pct}}%; border-radius:8rpx;"></view>
+            </view>
           </view>
         </view>
-        <!-- 进度条 -->
-        <view style="background:#F3F4F6; border-radius:8rpx; height:12rpx; margin-bottom:16rpx; overflow:hidden;">
-          <view style="background:#2563EB; height:100%; width:{{calibrationProgress}}%; border-radius:8rpx; transition:width 0.3s;"></view>
+
+        <view style="height:1rpx; background:#F3F4F6; margin-bottom:28rpx;"></view>
+
+        <!-- 第二章 -->
+        <view style="margin-bottom:28rpx;">
+          <view class="row-between" style="margin-bottom:12rpx;">
+            <view class="row">
+              <text style="font-size:28rpx; margin-right:12rpx;">{{unlockLevel >= 2 ? '✅' : '🔒'}}</text>
+              <view>
+                <text style="font-size:28rpx; font-weight:700; color:#111827;">第二章：深入</text>
+                <text style="font-size:20rpx; color:#9CA3AF; display:block;">12天使用 + 5次记录实际用时</text>
+              </view>
+            </view>
+            <text wx:if="{{unlockLevel >= 2}}" style="font-size:22rpx; color:#16A34A; font-weight:600;">已解锁</text>
+          </view>
+          <view style="background:#F8FAFF; border-radius:12rpx; padding:18rpx 22rpx; margin-bottom:12rpx;">
+            <text style="font-size:22rpx; color:#374151; display:block; line-height:36rpx;">⏱️ 时间校准分析（你平均低估多少%）</text>
+            <text style="font-size:22rpx; color:#374151; display:block; line-height:36rpx;">⚡ 你专属的能量高峰时段</text>
+            <text style="font-size:22rpx; color:#374151; display:block; line-height:36rpx;">📝 深度每周AI总结</text>
+          </view>
+          <view wx:if="{{unlockLevel < 2}}">
+            <view style="margin-bottom:8rpx;">
+              <view class="row-between" style="margin-bottom:4rpx;">
+                <text style="font-size:20rpx; color:#6B7280;">有效活跃天 {{unlockProgress.l2.days}}/12</text>
+                <text style="font-size:20rpx; color:#2563EB;">{{unlockProgress.l2.daysPct}}%</text>
+              </view>
+              <view style="background:#F3F4F6; border-radius:8rpx; height:8rpx; overflow:hidden;">
+                <view style="background:#2563EB; height:100%; width:{{unlockProgress.l2.daysPct}}%; border-radius:8rpx;"></view>
+              </view>
+            </view>
+            <view>
+              <view class="row-between" style="margin-bottom:4rpx;">
+                <text style="font-size:20rpx; color:#6B7280;">记录实际用时 {{unlockProgress.l2.cals}}/5 次</text>
+                <text style="font-size:20rpx; color:#2563EB;">{{unlockProgress.l2.calsPct}}%</text>
+              </view>
+              <view style="background:#F3F4F6; border-radius:8rpx; height:8rpx; overflow:hidden;">
+                <view style="background:#2563EB; height:100%; width:{{unlockProgress.l2.calsPct}}%; border-radius:8rpx;"></view>
+              </view>
+            </view>
+          </view>
         </view>
-        <text style="font-size:24rpx; color:#6B7280; line-height:38rpx;">再完成 {{10 - calibrationDataPoints}} 次任务并反馈实际用时，即可解锁。解锁后 Flow 将分析你的时间高估/低估规律，让每次计划更准确。</text>
+
+        <view style="height:1rpx; background:#F3F4F6; margin-bottom:28rpx;"></view>
+
+        <!-- 第三章 -->
+        <view>
+          <view class="row-between" style="margin-bottom:12rpx;">
+            <view class="row">
+              <text style="font-size:28rpx; margin-right:12rpx;">{{unlockLevel >= 3 ? '🌊' : '🔒'}}</text>
+              <view>
+                <text style="font-size:28rpx; font-weight:700; color:#111827;">第三章：传奇</text>
+                <text style="font-size:20rpx; color:#9CA3AF; display:block;">22天使用 + Streak最高达7天</text>
+              </view>
+            </view>
+            <text wx:if="{{unlockLevel >= 3}}" style="font-size:22rpx; color:#2563EB; font-weight:700;">🌊 心流达人</text>
+          </view>
+          <view style="background:#F8FAFF; border-radius:12rpx; padding:18rpx 22rpx; margin-bottom:12rpx;">
+            <text style="font-size:22rpx; color:#374151; display:block; line-height:36rpx;">🧠 完整个人效率洞察报告</text>
+            <text style="font-size:22rpx; color:#374151; display:block; line-height:36rpx;">🎁 月度Wrapped可分享成绩卡</text>
+            <text style="font-size:22rpx; color:#374151; display:block; line-height:36rpx;">🌊 专属"心流达人"徽章</text>
+            <text style="font-size:22rpx; color:#374151; display:block; line-height:36rpx;">🎯 推送内容个性化定制</text>
+          </view>
+          <view wx:if="{{unlockLevel < 3}}">
+            <view style="margin-bottom:8rpx;">
+              <view class="row-between" style="margin-bottom:4rpx;">
+                <text style="font-size:20rpx; color:#6B7280;">有效活跃天 {{unlockProgress.l3.days}}/22</text>
+                <text style="font-size:20rpx; color:#2563EB;">{{unlockProgress.l3.daysPct}}%</text>
+              </view>
+              <view style="background:#F3F4F6; border-radius:8rpx; height:8rpx; overflow:hidden;">
+                <view style="background:#2563EB; height:100%; width:{{unlockProgress.l3.daysPct}}%; border-radius:8rpx;"></view>
+              </view>
+            </view>
+            <view>
+              <view class="row-between" style="margin-bottom:4rpx;">
+                <text style="font-size:20rpx; color:#6B7280;">历史最长Streak {{unlockProgress.l3.streak}}/7天</text>
+                <text style="font-size:20rpx; color:#F97316;">{{unlockProgress.l3.streakPct}}%</text>
+              </view>
+              <view style="background:#F3F4F6; border-radius:8rpx; height:8rpx; overflow:hidden;">
+                <view style="background:#F97316; height:100%; width:{{unlockProgress.l3.streakPct}}%; border-radius:8rpx;"></view>
+              </view>
+            </view>
+          </view>
+        </view>
+
       </view>
     </view>
-  </view>
 
-  <!-- 关于与隐私 -->
-  <view style="margin-bottom:32rpx;">
-    <navigator url="/pages/privacy/privacy" style="display:flex; align-items:center; justify-content:space-between; padding:28rpx 0; border-bottom:1rpx solid #F3F4F6;">
-      <text style="font-size:30rpx; color:#374151;">隐私政策</text>
-      <text style="color:#9CA3AF;">›</text>
-    </navigator>
-  </view>
-
-  <!-- AI 风格 -->
-  <view style="margin-bottom:32rpx;">
-    <text style="font-size:24rpx; color:#6B7280; font-weight:600; letter-spacing:2rpx; display:block; margin-bottom:16rpx;">AI 风格</text>
-    <view class="row">
-      <view
-        wx:for="{{aiToneOptions}}"
-        wx:key="value"
-        class="chip {{settings.aiTone === item.value ? 'active' : ''}}"
-        bindtap="handleToneSelect"
-        data-value="{{item.value}}"
-      >{{item.label}}</view>
+    <!-- 情绪趋势（第一章解锁后） -->
+    <view wx:if="{{unlockLevel >= 1}}" style="margin-bottom:28rpx;">
+      <text style="font-size:24rpx; color:#6B7280; font-weight:600; display:block; margin-bottom:14rpx;">近期情绪</text>
+      <view class="card">
+        <view wx:if="{{moodLogs.length === 0}}" style="text-align:center; padding:20rpx 0; color:#9CA3AF; font-size:26rpx;">
+          完成任务后标记情绪，数据将在这里展示
+        </view>
+        <view wx:else class="row" style="justify-content:space-around;">
+          <view wx:for="{{moodLogs}}" wx:key="date" style="text-align:center;">
+            <text style="font-size:40rpx; display:block; margin-bottom:6rpx;">{{item.emoji}}</text>
+            <text style="font-size:20rpx; color:#9CA3AF;">{{item.date.slice(5)}}</text>
+          </view>
+        </view>
+      </view>
     </view>
-  </view>
+
+    <!-- 时间校准分析 -->
+    <view style="margin-bottom:28rpx;">
+      <text style="font-size:24rpx; color:#6B7280; font-weight:600; display:block; margin-bottom:14rpx;">时间校准分析</text>
+      <view class="card">
+        <view wx:if="{{calibrationUnlocked}}">
+          <view class="row" style="margin-bottom:14rpx;">
+            <text style="font-size:40rpx; margin-right:14rpx;">🔬</text>
+            <view>
+              <text style="font-size:28rpx; font-weight:600; color:#111827; display:block;">已解锁</text>
+              <text style="font-size:22rpx; color:#6B7280;">基于 {{calibrationDataPoints}} 个真实用时数据</text>
+            </view>
+          </view>
+          <text style="font-size:26rpx; color:#374151; line-height:40rpx;">Flow 正在根据你的真实用时习惯优化未来的时间预估。</text>
+        </view>
+        <view wx:else>
+          <view class="row" style="margin-bottom:14rpx;">
+            <text style="font-size:40rpx; margin-right:14rpx;">🔒</text>
+            <view>
+              <text style="font-size:28rpx; font-weight:600; color:#111827; display:block;">时间校准分析</text>
+              <text style="font-size:22rpx; color:#6B7280;">{{calibrationDataPoints}}/10 个数据点</text>
+            </view>
+          </view>
+          <view style="background:#F3F4F6; border-radius:8rpx; height:12rpx; margin-bottom:14rpx; overflow:hidden;">
+            <view style="background:#2563EB; height:100%; width:{{calibrationProgress}}%; border-radius:8rpx;"></view>
+          </view>
+          <text style="font-size:24rpx; color:#6B7280; line-height:38rpx;">再完成 {{10 - calibrationDataPoints}} 次任务并反馈实际用时即可解锁。</text>
+        </view>
+      </view>
+    </view>
+
+  </block>
+
+  <!-- ══════════ 设置 Tab ══════════ -->
+  <block wx:if="{{activeProfileTab === 'settings'}}">
+
+    <!-- 成就徽章 -->
+    <view wx:if="{{achievements.length > 0}}" style="margin-bottom:28rpx;">
+      <text style="font-size:24rpx; color:#6B7280; font-weight:600; display:block; margin-bottom:14rpx;">成就</text>
+      <view class="card">
+        <view style="display:flex; flex-wrap:wrap; gap:14rpx;">
+          <view wx:for="{{achievementBadges}}" wx:key="id" style="background:#F9FAFB; border-radius:12rpx; padding:14rpx 18rpx; display:flex; align-items:center;">
+            <text style="font-size:30rpx; margin-right:8rpx;">{{item.emoji}}</text>
+            <text style="font-size:22rpx; color:#374151;">{{item.name}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 社区月度挑战 -->
+    <view wx:if="{{challenge}}" style="margin-bottom:28rpx;">
+      <text style="font-size:24rpx; color:#6B7280; font-weight:600; display:block; margin-bottom:14rpx;">本月社区挑战</text>
+      <view class="card" style="{{challengeCompleted ? 'background:#F0FDF4; border:2rpx solid #BBF7D0;' : ''}}">
+        <view class="row-between" style="margin-bottom:14rpx;">
+          <view>
+            <text style="font-size:28rpx; font-weight:700; color:#111827; display:block;">🏆 {{challenge.title}}</text>
+            <text style="font-size:24rpx; color:#6B7280; margin-top:4rpx; display:block;">{{challenge.desc}}</text>
+          </view>
+          <text wx:if="{{challengeCompleted}}" style="font-size:24rpx; color:#16A34A; font-weight:600;">已完成✓</text>
+          <text wx:elif="{{challengeDaysLeft > 0}}" style="font-size:22rpx; color:#9CA3AF;">剩{{challengeDaysLeft}}天</text>
+        </view>
+        <view wx:if="{{challengeHasJoined}}" style="margin-bottom:14rpx;">
+          <view class="row-between" style="margin-bottom:6rpx;">
+            <text style="font-size:22rpx; color:#6B7280;">进度 {{challengeProgress}}/{{challenge.goal_value}}</text>
+            <text style="font-size:22rpx; color:#2563EB;">{{challengeProgressPct}}%</text>
+          </view>
+          <view style="background:#F3F4F6; border-radius:8rpx; height:12rpx; overflow:hidden;">
+            <view style="background:{{challengeCompleted ? '#16A34A' : '#2563EB'}}; height:100%; width:{{challengeProgressPct}}%; border-radius:8rpx;"></view>
+          </view>
+        </view>
+        <view class="row-between">
+          <text style="font-size:22rpx; color:#6B7280;">👥 {{challengeParticipants}} 人参与</text>
+          <view wx:if="{{!challengeHasJoined}}" class="btn-primary" style="height:64rpx; padding:0 32rpx; font-size:26rpx;" bindtap="handleJoinChallenge">加入挑战</view>
+          <text wx:else style="font-size:22rpx; color:#16A34A; font-weight:600;">✓ 已参与</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- AI 风格 -->
+    <view style="margin-bottom:28rpx;">
+      <text style="font-size:24rpx; color:#6B7280; font-weight:600; display:block; margin-bottom:14rpx;">AI 风格</text>
+      <view class="row">
+        <view wx:for="{{aiToneOptions}}" wx:key="value" class="chip {{settings.aiTone === item.value ? 'active' : ''}}" bindtap="handleToneSelect" data-value="{{item.value}}">{{item.label}}</view>
+      </view>
+    </view>
+
+    <!-- 隐私政策 -->
+    <view style="margin-bottom:32rpx;">
+      <navigator url="/pages/privacy/privacy" style="display:flex; align-items:center; justify-content:space-between; padding:28rpx; background:#FFF; border-radius:20rpx; box-shadow:0 1rpx 3rpx rgba(0,0,0,0.06);">
+        <text style="font-size:30rpx; color:#374151;">隐私政策</text>
+        <text style="color:#9CA3AF;">›</text>
+      </navigator>
+    </view>
+
+  </block>
 
 </view>
