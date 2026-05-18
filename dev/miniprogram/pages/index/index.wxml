@@ -357,16 +357,16 @@
         style="padding:14rpx 28rpx; border-radius:40rpx; background:#F3F4F6; font-size:28rpx; color:#374151;">{{item.l}}</view>
     </view>
     <view style="height:1rpx; background:#F3F4F6; margin-bottom:20rpx;"></view>
-    <!-- 自定义输入 -->
-    <text style="font-size:24rpx; color:#6B7280; display:block; margin-bottom:14rpx;">或者自定义：</text>
-    <view class="row" style="align-items:center; gap:12rpx; margin-bottom:24rpx;">
-      <input type="number" bindinput="handleCustomHoursValInput" value="{{customHoursVal}}"
-        style="height:80rpx; width:110rpx; background:#F3F4F6; border-radius:14rpx; font-size:36rpx; font-weight:700; color:#111827; text-align:center;" />
-      <text style="font-size:26rpx; color:#6B7280;">小时</text>
-      <input type="number" bindinput="handleCustomMinsValInput" value="{{customMinsVal}}"
-        style="height:80rpx; width:110rpx; background:#F3F4F6; border-radius:14rpx; font-size:36rpx; font-weight:700; color:#111827; text-align:center;" />
-      <text style="font-size:26rpx; color:#6B7280;">分钟</text>
-    </view>
+    <!-- 滑动选择 -->
+    <picker mode="multiSelector" range="{{hoursPickerRange}}" value="{{hoursPickerValue}}"
+      bindchange="handleHoursPickerChange" style="width:100%; margin-bottom:20rpx;">
+      <view style="background:#F3F4F6; border-radius:16rpx; padding:20rpx 24rpx; text-align:center;">
+        <text style="font-size:36rpx; font-weight:700; color:#2563EB;">
+          {{hoursPickerValue[0]}}小时{{hoursPickerValue[1] > 0 ? [0,15,30,45][hoursPickerValue[1]] + '分' : ''}}
+        </text>
+        <text style="font-size:24rpx; color:#9CA3AF; display:block; margin-top:6rpx;">上下滑动选择 ›</text>
+      </view>
+    </picker>
     <view class="btn-primary" bindtap="confirmCustomHours">确定</view>
   </view>
 </view>

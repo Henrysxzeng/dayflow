@@ -1,9 +1,7 @@
 const { callCloud } = require('../../utils/api')
 
 // 生成小时选项 0-24
-const HOUR_RANGE = Array.from({ length: 25 }, (_, i) => `${i}小时`)
-// 生成分钟选项 0,5,10,...,55
-const MIN_RANGE = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55].map(m => `${m}分`)
+const STANDARD_DURATIONS = [5, 15, 30, 60, 90, 120, 180]
 
 const calcEndTime = (startTime, minutes) => {
   if (!startTime || !minutes) return ''
@@ -31,18 +29,22 @@ Page({
       customReminderMinutes: 0,
       showCustomReminder: false
     },
-    // 时长picker
-    durationPickerRange: [HOUR_RANGE, MIN_RANGE],
+    // 时长picker（小时0-12 + 分钟0,5,10,...,55）
+    durationPickerRange: [
+      Array.from({ length: 13 }, (_, i) => `${i}小时`),
+      [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55].map(m => `${m}分`)
+    ],
     durationPickerValue: [0, 6],   // 默认0小时30分
     showDurationPicker: false,
     durationLabel: '30分',
+    durationIsNonStandard: false,  // 用于判断是否显示自定义chip为选中
     durationOptions: [
       { label: '自定义', value: -1 },
       { label: '5分', value: 5 },
       { label: '15分', value: 15 },
       { label: '30分', value: 30 },
       { label: '1小时', value: 60 },
-      { label: '1.5小时', value: 90 },
+      { label: '1.5h', value: 90 },
       { label: '2小时', value: 120 },
       { label: '3小时', value: 180 }
     ],
@@ -59,34 +61,35 @@ Page({
     templateCategories: [
       {
         name: '📚 学习', templates: [
-          { title: '阅读书籍', minutes: 30 }, { title: '英语学习', minutes: 20 },
-          { title: '整理笔记', minutes: 15 }, { title: '复习知识点', minutes: 45 },
+          { title: '阅读书籍', minutes: 30 }, { title: '英语学习', minutes: 15 },
+          { title: '整理笔记', minutes: 15 }, { title: '复习知识点', minutes: 60 },
           { title: '在线课程', minutes: 60 }
         ]
       },
       {
         name: '💼 工作', templates: [
-          { title: '写周报', minutes: 30 }, { title: '回复邮件', minutes: 20 },
+          { title: '写周报', minutes: 30 }, { title: '回复邮件', minutes: 15 },
           { title: '整理文件', minutes: 15 }, { title: '准备会议材料', minutes: 30 },
-          { title: '项目进度汇报', minutes: 45 }
+          { title: '项目进度汇报', minutes: 60 }
         ]
       },
       {
         name: '🏃 健康', templates: [
           { title: '冥想放松', minutes: 15 }, { title: '散步', minutes: 30 },
           { title: '健身运动', minutes: 60 }, { title: '拉伸运动', minutes: 15 },
-          { title: '睡前准备', minutes: 20 }
+          { title: '睡前准备', minutes: 30 }
         ]
       },
       {
         name: '🏠 生活', templates: [
           { title: '购物采买', minutes: 30 }, { title: '整理房间', minutes: 30 },
-          { title: '处理账单', minutes: 20 }, { title: '做饭', minutes: 45 },
-          { title: '联系家人朋友', minutes: 20 }
+          { title: '处理账单', minutes: 30 }, { title: '做饭', minutes: 60 },
+          { title: '联系家人朋友', minutes: 30 }
         ]
       }
     ],
-    customTemplates: [],   // 用户自定义模板
+    activeTemplateCategory: -1,   // -1 = 我的（默认显示我的）
+    customTemplates: [],
     showAddCustomTemplate: false,
     newTemplateTitle: '',
     newTemplateMinutes: 30,
@@ -135,21 +138,29 @@ Page({
   },
 
   // ── 时长选择 ──
+  _setDuration(minutes) {
+    const h = Math.floor(minutes / 60)
+    const m = minutes % 60
+    const mList = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55]
+    const mIdx = Math.max(0, mList.indexOf(m) === -1 ? mList.indexOf(mList.reduce((a, b) => Math.abs(b - m) < Math.abs(a - m) ? b : a)) : mList.indexOf(m))
+    const label = h > 0 ? `${h}小时${m > 0 ? m + '分' : ''}` : `${m}分`
+    const isNonStandard = !STANDARD_DURATIONS.includes(minutes)
+    this.setData({
+      'form.estimatedMinutes': minutes,
+      durationPickerValue: [h, mIdx],
+      durationLabel: label,
+      durationIsNonStandard: isNonStandard,
+      'form.lockedEndTime': calcEndTime(this.data.form.lockedStartTime, minutes)
+    })
+  },
+
   handleDurationSelect(e) {
     const value = e.currentTarget.dataset.value
     if (value === -1) {
       this.setData({ showDurationPicker: true })
     } else {
-      const h = Math.floor(value / 60)
-      const m = value % 60
-      const mIdx = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55].indexOf(m)
-      this.setData({
-        'form.estimatedMinutes': value,
-        showDurationPicker: false,
-        durationPickerValue: [h, Math.max(0, mIdx)],
-        durationLabel: h > 0 ? `${h}小时${m > 0 ? m + '分' : ''}` : `${m}分`,
-        'form.lockedEndTime': calcEndTime(this.data.form.lockedStartTime, value)
-      })
+      this._setDuration(value)
+      this.setData({ showDurationPicker: false })
     }
   },
 
@@ -157,15 +168,9 @@ Page({
     const [hIdx, mIdx] = e.detail.value
     const h = hIdx
     const m = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55][mIdx] || 0
-    const total = h * 60 + m
-    const label = h > 0 ? `${h}小时${m > 0 ? m + '分' : ''}` : `${m}分`
-    this.setData({
-      'form.estimatedMinutes': total || 5,
-      durationPickerValue: [hIdx, mIdx],
-      durationLabel: label,
-      showDurationPicker: false,
-      'form.lockedEndTime': calcEndTime(this.data.form.lockedStartTime, total || 5)
-    })
+    const total = h * 60 + m || 5
+    this._setDuration(total)
+    this.setData({ showDurationPicker: false })
   },
 
   cancelDurationPicker() { this.setData({ showDurationPicker: false }) },
@@ -208,24 +213,17 @@ Page({
   // ── 模板 ──
   noop() { },  // 阻止事件冒泡用
 
-  openTemplates() { this.setData({ showTemplates: true }) },
+  openTemplates() {
+    this.loadCustomTemplates()
+    this.setData({ showTemplates: true, activeTemplateCategory: -1 })
+  },
   closeTemplates() { this.setData({ showTemplates: false, showAddCustomTemplate: false }) },
   switchTemplateCategory(e) { this.setData({ activeTemplateCategory: parseInt(e.currentTarget.dataset.index) }) },
 
   applyTemplate(e) {
     const { title, minutes } = e.currentTarget.dataset
-    const h = Math.floor(minutes / 60)
-    const m = minutes % 60
-    const mIdx = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55].indexOf(m)
-    const label = h > 0 ? `${h}小时${m > 0 ? m + '分' : ''}` : `${m}分`
-    this.setData({
-      'form.title': title,
-      'form.estimatedMinutes': minutes,
-      durationPickerValue: [h, Math.max(0, mIdx)],
-      durationLabel: label,
-      showTemplates: false,
-      'form.lockedEndTime': calcEndTime(this.data.form.lockedStartTime, minutes)
-    })
+    this.setData({ 'form.title': title, showTemplates: false, showAddCustomTemplate: false })
+    this._setDuration(parseInt(minutes))
   },
 
   openAddCustomTemplate() { this.setData({ showAddCustomTemplate: true, newTemplateTitle: '', newTemplateMinutes: 30 }) },

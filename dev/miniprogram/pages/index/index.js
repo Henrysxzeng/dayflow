@@ -98,10 +98,16 @@ Page({
     showOnboarding: false,
     onboardingStep: 0,
     habitsForm: { wakeTime: '07:00', sleepTime: '23:00', hasLunchBreak: null, lunchStart: '12:00', lunchEnd: '13:30' },
-    // 自定义可用时长弹窗（修改时长用）
+    // 可用时长选择弹窗
     showCustomHoursModal: false,
     customHoursVal: '3',
     customMinsVal: '0',
+    hoursPickerRange: [
+      ['0小时','1小时','2小时','3小时','4小时','5小时','6小时'],
+      ['0分','15分','30分','45分']
+    ],
+    hoursPickerValue: [3, 0],
+    pendingNewTaskNotice: null,
     // 今天休息
     showRestDay: false,
     restDayDone: false,
@@ -132,20 +138,14 @@ Page({
     }
     // 处理新建任务后的今日新任务提示
     const newTask = getApp().globalData.newTaskForToday
-    if (newTask && this.data.planReady) {
+    if (newTask) {
       getApp().globalData.newTaskForToday = null
-      wx.showModal({
-        title: `新任务已添加`,
-        content: `"${newTask.title}"要加入今日计划吗？`,
-        confirmText: 'AI重新规划',
-        cancelText: '暂不改动',
-        success: res => {
-          if (res.confirm) this.generatePlan(this.data.availableHours, this.data.scheduleConstraints)
-        }
-      })
-      return
+      if (this.data.planReady) {
+        setTimeout(() => this._showNewTaskModal(newTask), 400)
+      } else {
+        this.setData({ pendingNewTaskNotice: newTask })
+      }
     }
-    if (newTask) getApp().globalData.newTaskForToday = null
 
     // 处理从任务列表跳转的番茄钟请求
     const pending = getApp().globalData.pendingPomodoro
@@ -308,6 +308,13 @@ Page({
       allTasksDone, allDoneQuote, almostThere,
       hardestTaskId: hardestTask ? hardestTask._id : null
     })
+
+    // 有待显示的新任务提示
+    if (this.data.pendingNewTaskNotice) {
+      const notice = this.data.pendingNewTaskNotice
+      this.setData({ pendingNewTaskNotice: null })
+      setTimeout(() => this._showNewTaskModal(notice), 500)
+    }
   },
 
   buildScheduleItems(tasks, busySlots) {
@@ -414,20 +421,38 @@ Page({
   handleCustomHoursValInput(e) { this.setData({ customHoursVal: e.detail.value }) },
   handleCustomMinsValInput(e) { this.setData({ customMinsVal: e.detail.value }) },
   confirmCustomHours() {
-    const h = parseFloat(this.data.customHoursVal) || 0
-    const m = parseInt(this.data.customMinsVal) || 0
+    const [hIdx, mIdx] = this.data.hoursPickerValue
+    const h = hIdx
+    const m = [0, 15, 30, 45][mIdx] || 0
     const total = Math.round((h + m / 60) * 10) / 10
-    if (total <= 0) { wx.showToast({ title: '请输入有效时长', icon: 'none' }); return }
+    if (total <= 0) { wx.showToast({ title: '请选择有效时长', icon: 'none' }); return }
     this.setData({ showCustomHoursModal: false })
     if (this.data.planReady) {
-      // 已有计划时修改时长：直接重新生成，保留现有时间约束
       this.generatePlan(total, this.data.scheduleConstraints)
     } else {
-      // 初次选时长：进入时间约束输入步骤
       this.setData({ planReady: false, selectedHoursTemp: total, selectedHours: total, waitingForSchedule: true, scheduleInput: '' })
     }
   },
   cancelCustomHours() { this.setData({ showCustomHoursModal: false }) },
+
+  handleHoursPickerChange(e) {
+    const [hIdx, mIdx] = e.detail.value
+    const h = hIdx
+    const m = [0, 15, 30, 45][mIdx] || 0
+    this.setData({ hoursPickerValue: [hIdx, mIdx], customHoursVal: String(h), customMinsVal: String(m) })
+  },
+
+  _showNewTaskModal(task) {
+    wx.showModal({
+      title: '新任务已添加',
+      content: `"${task.title}" 要加入今日计划吗？`,
+      confirmText: 'AI重新规划',
+      cancelText: '暂不改动',
+      success: res => {
+        if (res.confirm) this.generatePlan(this.data.availableHours, this.data.scheduleConstraints)
+      }
+    })
+  },
 
   quickSelectHours(e) {
     const h = parseFloat(e.currentTarget.dataset.h)
