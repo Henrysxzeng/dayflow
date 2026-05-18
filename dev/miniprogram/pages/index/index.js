@@ -73,6 +73,11 @@ Page({
     // 情绪收集
     showMoodPicker: false,
     todayMood: '',
+    // 临门一脚 & 最难任务反馈
+    almostThere: false,
+    hardestTaskId: null,
+    showHardestBanner: false,
+    hardestBannerText: '',
     // 周五预载
     showFridayPlanning: false,
     fridayNote: '',
@@ -145,6 +150,7 @@ Page({
       const app = getApp()
       app.globalData.openid = result.openid
       this.setData({ streak: result.streak || 0, jokerCount: result.jokers_remaining || 0 })
+      if (result.userType) getApp().globalData.userType = result.userType
 
       // 番茄钟持久化恢复
       if (result.activePomodoro && !this.data.showPomodoro) {
@@ -247,6 +253,17 @@ Page({
     const totalMinutes = mainTasks.reduce((s, t) => s + (t.suggested_minutes || t.estimated_minutes || 0), 0)
     const bufferMinutes = Math.max(0, (plan.available_hours || 4) * 60 - totalMinutes)
 
+    // 标记最难任务（估时最长的那个）
+    const hardestTask = mainTasks.reduce((max, t) =>
+      (t.suggested_minutes || t.estimated_minutes || 0) > (max.suggested_minutes || max.estimated_minutes || 0) ? t : max
+    , mainTasks[0] || {})
+    if (hardestTask && hardestTask._id) {
+      mainTasks.forEach(t => { t.isHardest = t._id === hardestTask._id })
+    }
+
+    const completedCount = mainTasks.filter(t => t.completed).length
+    const almostThere = completedCount > 0 && completedCount === mainTasks.length - 1
+
     const allTasksDone = mainTasks.length > 0 && mainTasks.every(t => t.completed)
       && fragmentTasks.every(t => t.completed)
     const allDoneQuote = allTasksDone
@@ -260,7 +277,8 @@ Page({
       availableHours: plan.available_hours, todayPlanId: plan._id,
       scheduleConstraints: plan.schedule_constraints || '',
       showRestDay: false, showOnboarding: false, waitingForSchedule: false,
-      allTasksDone, allDoneQuote
+      allTasksDone, allDoneQuote, almostThere,
+      hardestTaskId: hardestTask ? hardestTask._id : null
     })
   },
 
@@ -393,7 +411,22 @@ Page({
     const allDoneQuote = allTasksDone
       ? ALL_DONE_QUOTES[Math.floor(Math.random() * ALL_DONE_QUOTES.length)]
       : this.data.allDoneQuote
-    this.setData({ scheduleItems, allTasksDone, allDoneQuote })
+
+    // 临门一脚：还差1件
+    const remaining = tasks.filter(t => !t.completed).length
+    const almostThere = remaining === 1 && tasks.some(t => t.completed)
+
+    // 最难任务完成反馈
+    const isHardest = id === this.data.hardestTaskId
+    let hardestBannerText = ''
+    let showHardestBanner = false
+    if (isHardest && !allTasksDone) {
+      hardestBannerText = '今天最难的一件，刚才搞定了 💪'
+      showHardestBanner = true
+      setTimeout(() => this.setData({ showHardestBanner: false }), 3000)
+    }
+
+    this.setData({ scheduleItems, allTasksDone, allDoneQuote, almostThere, showHardestBanner, hardestBannerText })
 
     const allDone = tasks.every(t => t.completed)
 

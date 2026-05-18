@@ -82,6 +82,35 @@ exports.main = async (event, context) => {
 
     await db.collection('users').doc(openid).update({ data: updateData })
 
+    // 双人Streak：检查好友是否今天也完成了任务
+    try {
+      const friendshipsRes = await db.collection('friendships')
+        .where({ _id: db.command.or([{ user_a: openid }, { user_b: openid }]) })
+        .limit(20)
+        .get()
+
+      for (const fs of friendshipsRes.data || []) {
+        const partnerId = fs.user_a === openid ? fs.user_b : fs.user_a
+        const partnerLogRes = await db.collection('daily_logs')
+          .where({ user_id: partnerId, log_date: today })
+          .get()
+        const partnerDone = partnerLogRes.data && partnerLogRes.data.length > 0 && (partnerLogRes.data[0].tasks_completed || 0) > 0
+        if (partnerDone) {
+          const ps = fs.pair_streak || { current: 0, longest: 0, last_date: '' }
+          if (ps.last_date !== today) {
+            const newPs = ps.last_date === yesterday ? ps.current + 1 : 1
+            await db.collection('friendships').doc(fs._id).update({
+              data: {
+                'pair_streak.current': newPs,
+                'pair_streak.longest': Math.max(newPs, ps.longest || 0),
+                'pair_streak.last_date': today
+              }
+            })
+          }
+        }
+      }
+    } catch (pairErr) { console.log('pair streak error:', pairErr.message) }
+
     // 共同任务：更新状态和默契度
     try {
       const taskDoc = await db.collection('tasks').doc(taskId).get()

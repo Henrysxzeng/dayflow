@@ -131,6 +131,23 @@
       </view>
     </view>
 
+    <!-- 最难任务完成短暂反馈（3秒自动消失） -->
+    <view wx:if="{{showHardestBanner}}" style="background:#FFF7ED; border-radius:16rpx; padding:20rpx 28rpx; margin-bottom:16rpx; border:2rpx solid #FED7AA; display:flex; align-items:center;">
+      <text style="font-size:32rpx; margin-right:12rpx;">💪</text>
+      <text style="font-size:26rpx; color:#C2410C; font-weight:600;">今天最难的一件，刚才搞定了</text>
+    </view>
+
+    <!-- 临门一脚横幅（还差1件时） -->
+    <view wx:if="{{almostThere && !allTasksDone}}" style="background:linear-gradient(135deg,#EFF6FF,#DBEAFE); border-radius:20rpx; padding:28rpx; margin-bottom:24rpx; border:2rpx solid #BFDBFE;">
+      <view class="row">
+        <text style="font-size:36rpx; margin-right:12rpx;">🔥</text>
+        <view>
+          <text style="font-size:30rpx; font-weight:700; color:#1D4ED8; display:block;">还差 1 件，今天就赢了！</text>
+          <text style="font-size:22rpx; color:#3B82F6; margin-top:4rpx; display:block;">Almost there — 这是最关键的一步</text>
+        </view>
+      </view>
+    </view>
+
     <!-- 今日全部完成横幅 -->
     <view wx:if="{{allTasksDone}}" style="background:linear-gradient(135deg,#F0FDF4,#ECFDF5); border-radius:20rpx; padding:32rpx 28rpx; margin-bottom:24rpx; border:2rpx solid #BBF7D0;">
       <view class="row" style="margin-bottom:12rpx;">

@@ -63,6 +63,12 @@
           <text style="font-size:22rpx; color:#6B7280; display:block;">件</text>
         </view>
       </view>
+      <!-- 双人Streak -->
+      <view wx:if="{{item.pair_streak && item.pair_streak.current > 0}}" style="background:#FFF7ED; border-radius:12rpx; padding:12rpx 20rpx; margin-top:12rpx; display:flex; align-items:center;">
+        <text style="font-size:26rpx; margin-right:8rpx;">🔥</text>
+        <text style="font-size:24rpx; color:#C2410C; font-weight:600;">你们已连续 {{item.pair_streak.current}} 天一起完成</text>
+        <text wx:if="{{item.pair_streak.longest > item.pair_streak.current}}" style="font-size:20rpx; color:#9CA3AF; margin-left:8rpx;">最高 {{item.pair_streak.longest}} 天</text>
+      </view>
       <!-- 默契度进度条 -->
       <view style="margin-top:16rpx;">
         <view style="background:#F3F4F6; border-radius:8rpx; height:8rpx; overflow:hidden;">

@@ -52,6 +52,7 @@ exports.main = async (event, context) => {
         friend_code: info.friend_code || '',
         chemistry: fs.chemistry || 0,
         shared_tasks_completed: fs.shared_tasks_completed || 0,
+        pair_streak: fs.pair_streak || { current: 0, longest: 0, last_date: '' },
         level
       }
     })

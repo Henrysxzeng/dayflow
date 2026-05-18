@@ -73,6 +73,24 @@ exports.main = async (event, context) => {
     const calibrationCount = calibrationDataPoints || 0
     const longestStreak = (user.streak && user.streak.longest) || 0
 
+    // 身份标签（7天后根据行为模式计算）
+    let userType = null
+    if (activeDays >= 7) {
+      const weekRate = weekPlanned > 0 ? Math.round((weekCompleted / weekPlanned) * 100) : 0
+      const consistencyScore = activeDays > 0 ? longestStreak / activeDays : 0
+      if (longestStreak >= 14) {
+        userType = { emoji: '🔥', type: '连胜王', desc: '稳定持续是最强的超能力' }
+      } else if (weekRate >= 85 && weekCompleted >= 5) {
+        userType = { emoji: '⚡', type: '爆发型选手', desc: '你的效率远超大多数人' }
+      } else if (consistencyScore >= 0.6) {
+        userType = { emoji: '🐢', type: '稳定执行者', desc: '慢而不停，你有最强的耐力' }
+      } else if (totalCompleted >= 25) {
+        userType = { emoji: '🧠', type: '深度思考者', desc: '厚积薄发，你更在意质量' }
+      } else {
+        userType = { emoji: '🌱', type: '成长中', desc: '你正在建立自己独特的节奏' }
+      }
+    }
+
     // 分层解锁等级（基于行为质量，非数量，防止刷任务）
     // 第1章：5个有效活跃天（刷单天完成再多也只算1天）
     // 第2章：12天有效使用 AND 5次时间校准（必须认真记录实际用时，无法造假）
@@ -131,6 +149,7 @@ exports.main = async (event, context) => {
       jokers_remaining: streak.jokers_remaining || 0,
       showJoker,
       isNewUser: !hasAnyTasks,
+      userType,
       pending_failure_tags: user.pending_failure_tags || [],
       pending_achievements: pendingAchievements,
       achievements: user.achievements || [],
