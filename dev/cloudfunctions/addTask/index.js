@@ -14,7 +14,7 @@ const calcQuadrant = (importance, deadline) => {
 exports.main = async (event, context) => {
   const wxContext = cloud.getWXContext()
   const openid = wxContext.OPENID
-  const { title, deadline, estimatedMinutes, importance, description, lockedStartTime, preferredTime, reminderMinutesBefore } = event
+  const { title, deadline, estimatedMinutes, importance, description, lockedStartTime, preferredTime, reminderMinutesBefore, recurrenceType, recurrenceInterval, recurrenceDays } = event
 
   try {
     const isFragment = estimatedMinutes <= 10
@@ -33,6 +33,9 @@ exports.main = async (event, context) => {
       locked_start_time: lockedStartTime || null,
       preferred_time: preferredTime || null,
       reminder_minutes_before: reminderMinutesBefore || 0,
+      recurrence_type: recurrenceType || 'none',
+      recurrence_interval: recurrenceInterval || 1,
+      recurrence_days: recurrenceDays || [],
       status: 'pending',
       fail_history: [],
       fail_count: 0,

@@ -82,6 +82,33 @@ exports.main = async (event, context) => {
 
     await db.collection('users').doc(openid).update({ data: updateData })
 
+    // 循环任务：完成后自动创建下一次
+    try {
+      const completedTaskRes = await db.collection('tasks').doc(taskId).get()
+      const ct = completedTaskRes.data
+      if (ct.recurrence_type && ct.recurrence_type !== 'none') {
+        const curDeadline = ct.deadline ? new Date(ct.deadline.replace(' ', 'T')) : new Date()
+        let intervalDays = ct.recurrence_type === 'weekly' ? 7 : (ct.recurrence_type === 'custom' ? (ct.recurrence_interval || 7) : 1)
+        const nextDate = new Date(curDeadline)
+        nextDate.setDate(nextDate.getDate() + intervalDays)
+        const nd = nextDate
+        const nextDeadline = nd.getFullYear() + '-' + String(nd.getMonth() + 1).padStart(2, '0') + '-' + String(nd.getDate()).padStart(2, '0')
+        await db.collection('tasks').add({
+          data: {
+            user_id: ct.user_id, title: ct.title, description: ct.description || '',
+            deadline: nextDeadline, estimated_minutes: ct.estimated_minutes,
+            importance: ct.importance, urgency: ct.urgency, quadrant: ct.quadrant,
+            is_fragment: ct.is_fragment, locked_start_time: ct.locked_start_time || null,
+            preferred_time: ct.preferred_time || null, reminder_minutes_before: ct.reminder_minutes_before || 0,
+            recurrence_type: ct.recurrence_type, recurrence_interval: ct.recurrence_interval || 1,
+            recurrence_days: ct.recurrence_days || [],
+            status: 'pending', fail_history: [], fail_count: 0,
+            parent_task_id: null, created_at: db.serverDate(), completed_at: null
+          }
+        })
+      }
+    } catch (rErr) { console.log('recurrence error:', rErr.message) }
+
     // 双人Streak：检查好友是否今天也完成了任务
     try {
       const friendshipsRes = await db.collection('friendships')

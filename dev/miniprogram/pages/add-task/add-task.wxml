@@ -110,6 +110,23 @@
     </view>
   </view>
 
+  <!-- 循环设置 -->
+  <view style="margin-bottom:40rpx;">
+    <view style="font-size:26rpx; color:#6B7280; margin-bottom:12rpx;">循环设置</view>
+    <view class="row" style="flex-wrap:wrap; gap:12rpx; margin-bottom:12rpx;">
+      <view wx:for="{{recurrenceOptions}}" wx:key="value"
+        class="chip {{recurrenceType === item.value ? 'active' : ''}}"
+        bindtap="selectRecurrence" data-value="{{item.value}}">{{item.label}}</view>
+    </view>
+    <view wx:if="{{recurrenceType === 'custom'}}" style="background:#F9FAFB; border-radius:14rpx; padding:16rpx 24rpx; display:flex; align-items:center;">
+      <text style="font-size:26rpx; color:#374151; margin-right:12rpx;">每</text>
+      <input type="number" placeholder="7" bindinput="handleRecurrenceIntervalInput" value="{{recurrenceInterval}}"
+        style="height:64rpx; width:100rpx; background:#FFF; border-radius:12rpx; text-align:center; font-size:30rpx; font-weight:700; color:#111827;" />
+      <text style="font-size:26rpx; color:#374151; margin-left:12rpx;">天循环一次</text>
+    </view>
+    <text wx:if="{{recurrenceType !== 'none'}}" style="font-size:22rpx; color:#16A34A; display:block; margin-top:8rpx;">✓ 完成后自动创建下一次，截止日期顺延</text>
+  </view>
+
   <view style="margin-bottom:48rpx;">
     <view style="font-size:26rpx; color:#6B7280; margin-bottom:12rpx;">备注（选填）</view>
     <textarea class="card" style="padding:24rpx 28rpx; font-size:28rpx; color:#374151; width:100%; min-height:120rpx; box-sizing:border-box;" placeholder="补充说明..." placeholder-style="color:#D1D5DB;" bindinput="handleDescInput" value="{{form.description}}" />

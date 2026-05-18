@@ -98,7 +98,15 @@ Page({
     inviteFriend: false,
     friends: [],
     selectedFriendId: null,
-    selectedFriendName: ''
+    selectedFriendName: '',
+    recurrenceOptions: [
+      { label: '不循环', value: 'none' },
+      { label: '每天', value: 'daily' },
+      { label: '每周', value: 'weekly' },
+      { label: '自定义', value: 'custom' }
+    ],
+    recurrenceType: 'none',
+    recurrenceInterval: 7
   },
 
   onLoad(options) {
@@ -265,6 +273,9 @@ Page({
   },
 
   // ── 好友邀请 ──
+  selectRecurrence(e) { this.setData({ recurrenceType: e.currentTarget.dataset.value }) },
+  handleRecurrenceIntervalInput(e) { this.setData({ recurrenceInterval: parseInt(e.detail.value) || 7 }) },
+
   toggleInviteFriend() {
     const next = !this.data.inviteFriend
     this.setData({ inviteFriend: next, selectedFriendId: null, selectedFriendName: '' })
@@ -312,33 +323,36 @@ Page({
         description: form.description,
         lockedStartTime: form.schedulingMode === 'manual' ? form.lockedStartTime : null,
         preferredTime: form.schedulingMode === 'ai' && form.preferredTime ? form.preferredTime : null,
-        reminderMinutesBefore: form.reminderMinutesBefore || 0
+        reminderMinutesBefore: form.reminderMinutesBefore || 0,
+        recurrenceType: this.data.recurrenceType || 'none',
+        recurrenceInterval: this.data.recurrenceInterval || 7
       }
 
       if (this.data.isEditMode) {
-        await callCloud('updateTask', { taskId: this.data.editTaskId, ...taskData })
+        await callCloud('updateTask', { taskId: this.data.editTaskId, title: taskData.title, deadline: taskData.deadline, estimatedMinutes: taskData.estimatedMinutes, importance: taskData.importance, description: taskData.description, lockedStartTime: taskData.lockedStartTime, preferredTime: taskData.preferredTime, reminderMinutesBefore: taskData.reminderMinutesBefore })
         wx.hideLoading()
         wx.showToast({ title: '已保存', icon: 'success' })
-        setTimeout(() => wx.navigateBack(), 800)
+        setTimeout(function() { wx.navigateBack() }, 800)
       } else {
-        await callCloud('addTask', taskData)
+        const addRes = await callCloud('addTask', taskData)
+        const newTaskId = addRes && addRes.taskId
         wx.hideLoading()
 
-        // 判断是否应该加入今日计划
+        // 判断是否紧急（今日截止或重要程度高）
         const today = new Date()
-        const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`
+        const todayStr = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0')
         const isUrgentToday = (deadline && deadline.startsWith(todayStr)) || form.importance >= 3
 
-        if (isUrgentToday) {
+        if (isUrgentToday && newTaskId) {
           getApp().globalData.newTaskForToday = {
+            taskId: newTaskId,
             title: form.title.trim(),
-            estimatedMinutes: form.estimatedMinutes,
-            lockedStartTime: form.schedulingMode === 'manual' ? form.lockedStartTime : null
+            estimatedMinutes: form.estimatedMinutes
           }
         }
 
-        wx.showToast({ title: '已添加', icon: 'success' })
-        setTimeout(() => wx.navigateBack(), 600)
+        wx.showToast({ title: '已添加', icon: 'success', duration: 400 })
+        setTimeout(function() { wx.navigateBack() }, 500)
       }
     } catch (e) {
       wx.hideLoading()

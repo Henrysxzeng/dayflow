@@ -454,15 +454,63 @@ Page({
   },
 
   _showNewTaskModal(task) {
-    wx.hideToast()  // 先关掉"已添加"toast，避免与modal冲突
+    wx.hideToast()
+    const self = this
+
+    // 无计划或休息日状态：直接刷新让任务进入候选池，走选时长流程
+    if (!self.data.planReady || self.data.showRestDay) {
+      self.setData({ showRestDay: false, showOnboarding: false, planReady: false })
+      wx.showToast({ title: '任务已加入今日待办', icon: 'none', duration: 1500 })
+      setTimeout(function() { self.initPage() }, 300)
+      return
+    }
+
+    // 有计划：询问处理方式
     wx.showModal({
-      title: '新任务已添加',
-      content: `"${task.title}" 要加入今日计划吗？`,
-      confirmText: 'AI重新规划',
-      cancelText: '暂不改动',
-      success: res => {
-        if (res.confirm) this.generatePlan(this.data.availableHours, this.data.scheduleConstraints)
+      title: '今日有新任务',
+      content: '"' + task.title + '" 今天要做吗？',
+      confirmText: 'AI重新规划全部',
+      cancelText: '加到末尾不打乱',
+      success: function(res) {
+        if (res.confirm) {
+          self.generatePlan(self.data.availableHours, self.data.scheduleConstraints)
+        } else {
+          self._appendTaskToTodayPlan(task.taskId)
+        }
       }
+    })
+  },
+
+  _appendTaskToTodayPlan(taskId) {
+    const self = this
+    if (!taskId) { wx.showToast({ title: '任务ID丢失，请手动重新生成', icon: 'none' }); return }
+    wx.showLoading({ title: '加入中...', mask: true })
+    callCloud('appendToTodayPlan', { taskId: taskId, planId: self.data.todayPlanId || null }).then(function(res) {
+      wx.hideLoading()
+      if (res.success && res.task) {
+        const t = res.task
+        const newEntry = {
+          _id: taskId,
+          title: t.title,
+          estimated_minutes: t.estimated_minutes,
+          suggested_minutes: t.estimated_minutes,
+          durationDisplay: minutesToDisplay(t.estimated_minutes),
+          timeDisplay: '',
+          ai_note: '',
+          note: '',
+          completed: false,
+          isHardest: false,
+          itemType: 'task'
+        }
+        const mainTasks = self.data.mainTasks.concat([newEntry])
+        const scheduleItems = self.data.scheduleItems.concat([newEntry])
+        const total = mainTasks.reduce(function(s, x) { return s + (x.suggested_minutes || x.estimated_minutes || 0) }, 0)
+        self.setData({ mainTasks: mainTasks, scheduleItems: scheduleItems, totalMinutes: total, planReady: true })
+        wx.showToast({ title: '已加到今日末尾', icon: 'success' })
+      }
+    }).catch(function() {
+      wx.hideLoading()
+      wx.showToast({ title: '加入失败', icon: 'none' })
     })
   },
 
