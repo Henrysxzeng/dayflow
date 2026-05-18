@@ -127,17 +127,13 @@ const buildUserPrompt = (tasks, availableHours, date, tone, scheduleConstraints,
     ? `\n已完成任务耗时 ${context.alreadyCompletedMinutes} 分钟，剩余可用时间约 ${Math.round(availMinutes / 6) / 10} 小时，请基于剩余时间安排任务。\n`
     : ''
 
-  // 用序号代替真实ID传给AI，彻底避免AI记错长ID导致的幻觉问题
-  const taskSeqMap = {}  // seq -> task对象
-  regularTasks.forEach(function(t, i) { taskSeqMap[i + 1] = t })
-
   return `今天日期：${date}
-今日可用时间：${availableHours} 小时（实际剩余：${Math.round(availMinutes / 6) / 10} 小时）
+今日可用时间：${availableHours} 小时
 AI风格：${toneDesc}
 ${habitsSection}${currentTimeSection}${completedSection}${freshStartSection}${completionRateSection}${calibrationSection}${lockedSection}${mustDoSection}${constraintSection}
-待排任务（序号从1开始，请用序号num而非原始ID来标识任务）：
-${JSON.stringify(regularTasks.map(function(t, i) { return {
-    num: i + 1,
+待排任务清单：
+${JSON.stringify(regularTasks.map(function(t) { return {
+    task_id: t._id,
     title: t.title,
     deadline: t.deadline || null,
     estimated_minutes: t.estimated_minutes,
@@ -147,12 +143,11 @@ ${JSON.stringify(regularTasks.map(function(t, i) { return {
     user_preferred_time: t.preferred_time || null
   }}), null, 2)}
 
-重要：请在 main_plan 中用 task_num（整数序号）而不是 task_id 来标识任务。
-请返回如下 JSON：
+请返回如下 JSON（task_id 必须原样使用上面列表中的值，不能修改或编造）：
 {
   "main_plan": [
     {
-      "task_num": 1,
+      "task_id": "上面列表中的task_id原值",
       "suggested_minutes": 60,
       "suggested_start_time": "09:00",
       "suggested_end_time": "10:00",
@@ -160,9 +155,9 @@ ${JSON.stringify(regularTasks.map(function(t, i) { return {
     }
   ],
   "busy_slots": [
-    {"start": "XX:00", "end": "XX:30", "label": "描述（只在有真实忙碌时段时才加）"}
+    {"start": "XX:00", "end": "XX:30", "label": "描述"}
   ],
-  "fragment_plan": [2, 3],
+  "fragment_plan": ["task_id原值"],
   "summary": "今日计划整体说明，30字以内，温暖自然"
 }`
 }
@@ -269,10 +264,6 @@ exports.main = async (event, context) => {
 
     const promptContext = { freshStart, recentRate, rateAdvice, calibrationFactor, schedulePreferences, currentTime, alreadyCompletedMinutes }
 
-    // 序号到任务的映射（彻底解决AI幻觉ID问题）
-    const seqToTask = {}
-    regularTasks.forEach(function(t, i) { seqToTask[i + 1] = t })
-
     const aiResult = await callDeepSeek([
       { role: 'system', content: SYSTEM_PROMPT },
       { role: 'user', content: buildUserPrompt(tasks, availableHours, date, tone, scheduleConstraints, promptContext, lockedTasks) }
@@ -280,8 +271,7 @@ exports.main = async (event, context) => {
 
     const busySlots = aiResult.busy_slots || []
 
-    // 用序号（task_num）从AI响应中查找对应任务，彻底避免AI幻觉ID
-    const buildTaskEntry = function(task, p) {
+    const makeEntry = function(task, p) {
       return { user_id: task.user_id, _id: task._id, title: task.title, description: task.description,
                deadline: task.deadline, estimated_minutes: task.estimated_minutes,
                importance: task.importance, quadrant: task.quadrant, is_fragment: task.is_fragment,
@@ -292,36 +282,26 @@ exports.main = async (event, context) => {
                ai_note: (p && p.note) || '' }
     }
 
+    // 三层匹配：精确ID → 标题 → 保底（彻底防止AI幻觉ID导致空计划）
     const mainTasksData = []
     ;(aiResult.main_plan || []).forEach(function(p) {
-      let task = null
-      // 优先用序号匹配（新方式，100%可靠）
-      if (p.task_num && seqToTask[p.task_num]) {
-        task = seqToTask[p.task_num]
-      }
-      // 兼容旧格式：按真实ID匹配
-      if (!task && p.task_id) task = tasks.find(function(t) { return t._id === p.task_id })
-      // 最后按标题匹配
-      if (!task && p.task_id) task = tasks.find(function(t) { return t.title === p.task_id })
-      if (task) mainTasksData.push(buildTaskEntry(task, p))
+      var task = tasks.find(function(t) { return t._id === p.task_id })
+      if (!task) task = tasks.find(function(t) { return t.title === p.task_id || t.title === (p.task_title || '') })
+      if (task) mainTasksData.push(makeEntry(task, p))
     })
-
-    // 保底：AI完全没排出任务时，按优先级取前5个
     if (mainTasksData.length === 0 && regularTasks.length > 0) {
-      const fallback = regularTasks.slice(0, Math.min(5, regularTasks.length))
-      const minutesEach = Math.max(15, Math.floor(availableHours * 60 * 0.8 / fallback.length))
+      var fallback = regularTasks.slice(0, Math.min(5, regularTasks.length))
+      var minsEach = Math.max(15, Math.floor(availableHours * 60 * 0.8 / fallback.length))
       fallback.forEach(function(t) {
-        mainTasksData.push(buildTaskEntry(t, { suggested_minutes: Math.min(minutesEach, t.estimated_minutes), note: '（自动安排）' }))
+        mainTasksData.push(makeEntry(t, { suggested_minutes: Math.min(minsEach, t.estimated_minutes), note: '（自动安排）' }))
       })
     }
 
-    // fragment 同样用序号匹配
-    const fragmentTasksData = (aiResult.fragment_plan || []).map(function(item) {
-      if (typeof item === 'number' && seqToTask[item]) return seqToTask[item]
-      return tasks.find(function(t) { return t._id === item })
+    const fragmentTasksData = (aiResult.fragment_plan || []).map(function(id) {
+      return tasks.find(function(t) { return t._id === id })
     }).filter(Boolean)
 
-    // 用 mainTasksData 里的真实 _id 作为 selected_task_ids（修复之前保存错误ID的bug）
+    // 关键修复：用实际匹配到的任务的真实_id存储，不用AI返回的（可能错误的）id
 
     // 用 mainTasksData 的真实 _id 保存（彻底修复之前存错ID的bug）
     const realMainTaskIds = mainTasksData.map(function(t) { return t._id })
