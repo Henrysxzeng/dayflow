@@ -269,6 +269,10 @@ exports.main = async (event, context) => {
       { role: 'user', content: buildUserPrompt(tasks, availableHours, date, tone, scheduleConstraints, promptContext, lockedTasks) }
     ])
 
+    if (!aiResult || typeof aiResult !== 'object') {
+      throw new Error('AI returned invalid response')
+    }
+
     const busySlots = aiResult.busy_slots || []
 
     const makeEntry = function(task, p) {

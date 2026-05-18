@@ -475,17 +475,16 @@ Page({
   },
 
   showRetryModal(hours, scheduleConstraints, retryCount, errMsg) {
-    const isTimeout = !errMsg || errMsg.includes('timeout') || errMsg.includes('超时')
-    const content = isTimeout
-      ? 'AI 响应比较慢，可能是网络问题，要重试吗？'
-      : `生成失败，要重试吗？`
+    var isTimeout = !errMsg || (errMsg && (errMsg.indexOf('timeout') >= 0 || errMsg.indexOf('超时') >= 0))
+    var content = isTimeout ? 'AI响应慢，要重试吗？' : (errMsg ? '生成失败：' + errMsg.substring(0, 30) : '生成失败，要重试吗？')
+    var self = this
     wx.showModal({
-      title: retryCount === 0 ? '生成失败' : `生成失败（第${retryCount + 1}次）`,
-      content,
+      title: '生成失败',
+      content: content,
       confirmText: '重试',
-      cancelText: '稍后再说',
-      success: res => {
-        if (res.confirm) this.generatePlan(hours, scheduleConstraints, retryCount + 1)
+      cancelText: '取消',
+      success: function(res) {
+        if (res.confirm) self.generatePlan(hours, scheduleConstraints, retryCount + 1)
       }
     })
   },
