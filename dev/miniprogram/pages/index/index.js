@@ -155,7 +155,12 @@ Page({
     const newTask = getApp().globalData.newTaskForToday
     if (newTask) {
       getApp().globalData.newTaskForToday = null
-      // 强制刷新：不管当前planReady状态，直接重新加载页面并带着新任务通知
+      // 新任务通知优先：如果番茄钟正在运行先关掉，避免遮挡弹窗
+      if (this.data.showPomodoro) {
+        if (this._pomodoroTimer) { clearInterval(this._pomodoroTimer); this._pomodoroTimer = null }
+        this.setData({ showPomodoro: false, pomodoroTaskId: null })
+        callCloud('savePomodoroState', { action: 'end' }).catch(function() {})
+      }
       this.setData({
         pendingNewTaskNotice: newTask,
         showRestDay: false,
@@ -164,7 +169,7 @@ Page({
       })
       wx.showLoading({ title: '加载中...', mask: false })
       this.initPage()
-      return  // 跳过下面的planReady检查，避免重复调用initPage
+      return
     }
 
     // 处理从任务列表跳转的番茄钟请求
