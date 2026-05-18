@@ -127,45 +127,52 @@
 
 <!-- 添加好友浮层 -->
 <view wx:if="{{showAddFriend}}" style="position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); display:flex; align-items:flex-end; z-index:999;">
-  <view style="background:#FFF; border-radius:32rpx 32rpx 0 0; padding:48rpx 40rpx 80rpx; width:100%;">
-    <text style="font-size:32rpx; font-weight:700; color:#111827; display:block; margin-bottom:8rpx;">添加好友</text>
-    <text style="font-size:26rpx; color:#6B7280; display:block; margin-bottom:32rpx;">输入对方在"好友"页面显示的好友码</text>
+  <view style="background:#FFF; border-radius:32rpx 32rpx 0 0; padding:32rpx 32rpx 56rpx; width:100%;">
+    <view class="row-between" style="margin-bottom:20rpx;">
+      <text style="font-size:32rpx; font-weight:700; color:#111827;">添加好友</text>
+      <text bindtap="closeAddFriend" style="font-size:26rpx; color:#9CA3AF; padding:8rpx;">取消</text>
+    </view>
+    <text style="font-size:24rpx; color:#6B7280; display:block; margin-bottom:20rpx;">输入对方的好友码（在对方"好友"页面可看到）</text>
     <input
       type="text"
       placeholder="例：FCAB34"
-      placeholder-style="color:#D1D5DB;"
+      placeholder-style="color:#D1D5DB; font-size:28rpx; letter-spacing:4rpx;"
       bindinput="handleCodeInput"
       value="{{inputCode}}"
-      style="background:#F9FAFB; border-radius:16rpx; padding:24rpx; font-size:36rpx; color:#111827; text-align:center; letter-spacing:8rpx; width:100%; box-sizing:border-box; margin-bottom:28rpx; font-weight:700;"
+      style="background:#F3F4F6; border-radius:16rpx; padding:20rpx; font-size:32rpx; color:#111827; text-align:center; letter-spacing:6rpx; width:100%; box-sizing:border-box; margin-bottom:20rpx; font-weight:700;"
       maxlength="6"
     />
-    <view class="btn-primary" style="margin-bottom:16rpx;" bindtap="handleAddFriend">添加好友</view>
-    <view class="btn-ghost" bindtap="closeAddFriend">取消</view>
+    <view class="btn-primary" bindtap="handleAddFriend">添加好友</view>
   </view>
 </view>
 
 <!-- 编辑名片浮层 -->
 <view wx:if="{{showEditProfile}}" style="position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); display:flex; align-items:flex-end; z-index:999;">
-  <view style="background:#FFF; border-radius:32rpx 32rpx 0 0; padding:48rpx 40rpx 80rpx; width:100%;">
-    <text style="font-size:32rpx; font-weight:700; color:#111827; display:block; margin-bottom:32rpx;">编辑名片</text>
-    <!-- 头像选择 -->
-    <view bindtap="openAvatarPicker" style="width:120rpx; height:120rpx; border-radius:60rpx; background:#EFF6FF; display:flex; align-items:center; justify-content:center; margin:0 auto 32rpx; position:relative;">
-      <text style="font-size:64rpx;">{{editAvatar}}</text>
-      <text style="position:absolute; bottom:-4rpx; right:-4rpx; font-size:22rpx; background:#2563EB; color:#FFF; border-radius:12rpx; padding:2rpx 8rpx;">换</text>
+  <view style="background:#FFF; border-radius:32rpx 32rpx 0 0; padding:32rpx 32rpx 56rpx; width:100%;">
+    <view class="row-between" style="margin-bottom:24rpx;">
+      <text style="font-size:32rpx; font-weight:700; color:#111827;">编辑名片</text>
+      <text bindtap="closeEditProfile" style="font-size:26rpx; color:#9CA3AF; padding:8rpx;">取消</text>
     </view>
-    <!-- 名字 -->
-    <view style="font-size:26rpx; color:#6B7280; margin-bottom:12rpx;">昵称（最多12字）</view>
-    <input
-      type="text"
-      placeholder="怎么称呼你？"
-      placeholder-style="color:#D1D5DB;"
-      bindinput="handleNameInput"
-      value="{{editName}}"
-      style="background:#F9FAFB; border-radius:16rpx; padding:24rpx; font-size:30rpx; color:#111827; width:100%; box-sizing:border-box; margin-bottom:28rpx;"
-      maxlength="12"
-    />
-    <view class="btn-primary" style="margin-bottom:16rpx;" bindtap="saveProfile">保存</view>
-    <view class="btn-ghost" bindtap="closeEditProfile">取消</view>
+    <!-- 头像 + 输入框横排 -->
+    <view class="row" style="margin-bottom:24rpx;">
+      <view bindtap="openAvatarPicker" style="width:96rpx; height:96rpx; border-radius:48rpx; background:#EFF6FF; display:flex; align-items:center; justify-content:center; margin-right:24rpx; flex-shrink:0; position:relative;">
+        <text style="font-size:52rpx;">{{editAvatar}}</text>
+        <text style="position:absolute; bottom:-2rpx; right:-2rpx; font-size:20rpx; background:#2563EB; color:#FFF; border-radius:10rpx; padding:2rpx 8rpx;">换</text>
+      </view>
+      <view class="flex-1">
+        <text style="font-size:24rpx; color:#6B7280; display:block; margin-bottom:8rpx;">昵称（最多12字）</text>
+        <input
+          type="text"
+          placeholder="怎么称呼你？"
+          placeholder-style="color:#D1D5DB;"
+          bindinput="handleNameInput"
+          value="{{editName}}"
+          style="background:#F3F4F6; border-radius:14rpx; padding:18rpx 20rpx; font-size:30rpx; color:#111827; width:100%; box-sizing:border-box;"
+          maxlength="12"
+        />
+      </view>
+    </view>
+    <view class="btn-primary" bindtap="saveProfile">保存</view>
   </view>
 </view>
 
