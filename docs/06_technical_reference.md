@@ -2,9 +2,10 @@
 
 > 写给下一个接手此项目的开发者或 AI 助手。读完本文档应能完全理解项目架构、数据结构、业务逻辑，并能独立进行开发迭代。
 
-**项目名称：** FlowCast  
+**项目名称：** FlowCast（原名 DayFlow）
 **类型：** 微信小程序（含云开发后端）  
-**核心功能：** AI 驱动的每日任务规划助手  
+**核心功能：** AI 驱动的每日任务规划助手 + 好友协作系统
+**版本：** V2.0  
 **开发完成时间：** 2026年5月  
 
 ---
@@ -710,19 +711,192 @@ completeTask 或 markRestDay 调用时：
 
 ---
 
-## 十一、已知问题与优化方向
+## 十一、已知问题
 
-**已知问题：**
-1. `tasks_planned` 在 `daily_logs` 里有时记录不准确（completeTask 首次创建 log 时写死为 1），导致完成率可能超过100%。前端已加 `Math.min(100, ...)` 做上限。
-2. 社区挑战中 `goal_type === 'tasks'` 时，进度统计依赖 `daily_logs` 的 `tasks_completed` 字段，该字段同上可能不准。
-3. 番茄钟仅前端计时，不持久化，App 被系统杀死后丢失。
+1. `tasks_planned` 在 `daily_logs` 里有时记录不准确（completeTask 首次创建 log 时写死为1），导致完成率可能超过100%。前端已加 `Math.min(100, ...)` 做上限。
+2. 社区挑战 `goal_type === 'tasks'` 时进度依赖 `tasks_completed` 字段，同上可能不准。
+3. `friendships` 集合使用 `user_a/user_b` 双向查询时需 `db.command.or`，数量多时可能有性能问题。
 
-**后续优化方向：**
-1. 番茄钟：云端记录专注记录，页面重新打开后恢复
-2. 个性化洞察：积累30天数据后，AI 分析用户拖延规律和高效时段
-3. 好友挑战：生成挑战分享卡，好友点击进入 FlowCast
-4. 订阅付费：Streak > 30天的用户转化率最高，加 Pro 功能
-5. 年度 Wrapped 报告：仿 Spotify Wrapped，年底生成分享卡
+---
+
+## 十二、V2.0 新增内容（追加文档）
+
+### 12.1 新增数据库集合
+
+#### `friendships` — 好友关系与默契度
+
+```javascript
+{
+  _id: "auto",
+  user_a: "openid_A",              // String，好友关系发起方
+  user_b: "openid_B",              // String，被添加方
+  chemistry: 15,                    // Number，默契度分值（双方共同完成任务+2）
+  shared_tasks_completed: 8,        // Number，一起完成的任务总数
+  created_at: Date
+}
+```
+
+**默契度等级（getFriendsData 计算）：**
+
+| 分数 | emoji | 称号 | 副标题 |
+|------|-------|------|--------|
+| 0-10 | 🌱 | 初识投缘 | 入门·初见好感 |
+| 11-30 | 🔥 | 志趣相投 | 初阶·彼此合拍 |
+| 31-60 | ✨ | 灵犀暗通 | 中阶·渐有感应 |
+| 61-100 | 💎 | 默契十足 | 高阶·高度契合 |
+| 100+ | 🌊 | 心流共振 | 满级·极致同频 |
+
+---
+
+#### `shared_tasks` — 好友协作任务
+
+```javascript
+{
+  _id: "auto",
+  creator_id: "openid_A",           // String，发起邀请的用户
+  invitee_id: "openid_B",           // String，被邀请的用户
+  task_title: "背单词30分钟",        // String，任务名称
+  estimated_minutes: 30,             // Number
+  creator_task_id: "task_xxx",       // String，creator 任务池中的任务 ID
+  invitee_task_id: null,             // String | null，invitee 接受后生成的任务 ID
+  creator_completed: false,          // Boolean
+  invitee_completed: false,          // Boolean
+  status: "pending",                 // String：pending|accepted|creator_done|invitee_done|both_done
+  created_at: Date,
+  completed_at: null                 // Date | null，双方都完成时记录
+}
+```
+
+**状态流转：**
+```
+pending（邀请发出，待接受）
+  → accepted（invitee 接受，双方任务池各有一条记录）
+  → creator_done / invitee_done（一方完成）
+  → both_done（双方完成，触发 chemistry +2）
+```
+
+---
+
+#### `users` 新增字段（V2.0）
+
+```javascript
+{
+  // 好友系统
+  friend_code: "FC3K7M",            // String，6位唯一好友码，首次调用 updateProfile 生成
+  display_name: "张三",              // String，好友页显示名，最多12字
+  avatar_emoji: "😊",               // String，头像 emoji
+
+  // 番茄钟持久化
+  active_pomodoro: {                 // Object | null
+    task_id: "xxx",
+    task_title: "背单词",
+    start_time: 1716000000000,       // Number，时间戳（毫秒）
+    phase: "focus",                  // String：focus | break
+    total_seconds: 1500              // Number，本阶段总秒数
+  },
+
+  // 分层解锁（由 getUserInfo 计算，不直接存储）
+  // unlockLevel 通过 activeDays + calibrationCount + streak.longest 实时计算
+}
+```
+
+---
+
+### 12.2 新增云函数（V2.0，共9个）
+
+| 云函数 | 功能 | 超时 |
+|--------|------|------|
+| `updateProfile` | 设置昵称/头像/生成好友码 | 10s |
+| `addFriend` | 通过好友码添加好友，创建 friendship 记录 | 10s |
+| `getFriendsData` | 获取好友列表（含默契度、等级），查询待接受邀请 | 20s |
+| `createSharedTask` | 创建协作任务：在自己任务池建任务，同时建 shared_tasks 记录 | 10s |
+| `joinSharedTask` | 接受邀请：在自己任务池建任务，更新 shared_tasks 状态 | 10s |
+| `getSharedTaskHistory` | 查询与好友的共同任务历史（可过滤特定好友） | 10s |
+| `savePomodoroState` | 番茄钟云端持久化：start 时写入 users.active_pomodoro，end 时删除 | 10s |
+| `saveMood` | 保存今日情绪到 daily_logs.mood 字段 | 10s |
+| `updateTask` | 编辑现有任务（重新计算 is_fragment 和 quadrant） | 10s |
+
+---
+
+### 12.3 `getUserInfo` V2.0 新增返回字段
+
+```javascript
+{
+  // 分层解锁
+  unlockLevel: 1,                    // Number：0|1|2|3
+  unlockProgress: {
+    activeDays: 5,                   // 有效活跃天数
+    calibrationCount: 3,             // 时间校准数据点数
+    longestStreak: 4,                // 历史最长 Streak
+    l1: { days: 5, daysTarget: 5, pct: 100 },
+    l2: { days: 5, daysTarget: 12, cals: 3, calsTarget: 5, daysPct: 42, calsPct: 60 },
+    l3: { days: 5, daysTarget: 22, streak: 4, streakTarget: 7, daysPct: 23, streakPct: 57 }
+  },
+  activeDays: 5,                     // Number，有效活跃天数（有完成或休息的天）
+  moodLogs: [                        // Array，近7天情绪记录
+    { date: "2026-05-17", mood: "great", emoji: "⚡" }
+  ],
+  activePomodoro: {                  // Object | null，当前进行中的番茄钟（如有）
+    task_id: "xxx",
+    task_title: "背单词",
+    start_time: 1716000000000,
+    phase: "focus",
+    total_seconds: 1500,
+    remaining: 847,                  // 剩余秒数（实时计算）
+    elapsed: 653
+  }
+}
+```
+
+---
+
+### 12.4 `completeTask` V2.0 新增逻辑
+
+完成任务时检查 `tasks.is_shared` 字段：
+1. 查询关联的 `shared_tasks` 记录
+2. 更新 `creator_completed` 或 `invitee_completed`
+3. 若双方均完成：更新 `friendships.chemistry +2`，`shared_tasks_completed +1`，标记 `status: both_done`
+
+---
+
+### 12.5 前端新增页面
+
+#### `pages/friends`（好友页，第3个底部Tab）
+
+**三个子Tab：**
+- **好友**：好友列表（按默契度降序），显示称号+副标题+进度条
+- **邀请**：待接受的协作任务邀请（`shared_tasks.status === 'pending' && invitee_id === me`）
+- **历史**：共同任务记录，显示双方完成状态
+
+**主要功能：**
+- 我的名片（头像emoji + 昵称 + 好友码，可复制/分享）
+- "+" 按钮 → 输入好友码添加好友
+- 名片区点击 → 编辑昵称和头像
+
+---
+
+### 12.6 `add-task` 页面 V2.0 新增
+
+**模板库（`showTemplates`）：**
+底部弹出面板，4个分类，20个模板，点击预填表单。
+
+**好友邀请（`inviteFriend`）：**
+底部 toggle 开关 → 展示好友列表 → 选择一位好友 → 提交时调用 `createSharedTask` 而非 `addTask`。
+
+**编辑模式（`isEditMode`）：**
+通过 URL 参数 `?taskId=xxx` 进入，`onLoad` 中加载任务数据预填表单，提交时调用 `updateTask`。
+
+---
+
+### 12.7 分层解锁条件设计（防刷）
+
+| 章节 | 条件 | 防刷原理 |
+|------|------|---------|
+| 第1章 | 5天有效活跃（`tasks_completed>0 OR is_rest_day`） | 单天刷再多只算1天 |
+| 第2章 | 12天有效活跃 AND 5次时间校准反馈 | 时间校准数据无法造假 |
+| 第3章 | 22天有效活跃 AND 历史最长Streak≥7 | 连续7天必须真实持续 |
+
+解锁等级在 `getUserInfo` 实时计算，不存储在数据库。
 
 ---
 
