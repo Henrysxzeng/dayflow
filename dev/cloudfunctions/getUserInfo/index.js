@@ -67,26 +67,41 @@ exports.main = async (event, context) => {
     const weekCompleted = recentLogs.reduce((s, l) => s + (l.tasks_completed || 0), 0)
     const weekPlanned = recentLogs.reduce((s, l) => s + (l.tasks_planned || 0), 0)
 
-    // 活跃天数（有记录的天数，用于解锁判断）
-    const activeDays = logs.length
+    // 有效活跃天数：当天有真实完成任务或主动标记休息才算（单天刷再多只算1天，防刷）
+    const activeDays = logs.filter(l => (l.tasks_completed || 0) > 0 || l.is_rest_day).length
     const totalCompleted = user.total_completed || 0
+    const calibrationCount = calibrationDataPoints || 0
+    const longestStreak = (user.streak && user.streak.longest) || 0
 
-    // 分层解锁等级
+    // 分层解锁等级（基于行为质量，非数量，防止刷任务）
+    // 第1章：5个有效活跃天（刷单天完成再多也只算1天）
+    // 第2章：12天有效使用 AND 5次时间校准（必须认真记录实际用时，无法造假）
+    // 第3章：22天有效使用 AND 历史最长Streak达7天（必须真实持续使用）
     const unlockLevel =
-      (activeDays >= 30 || totalCompleted >= 50) ? 3 :
-      (activeDays >= 14 || totalCompleted >= 25) ? 2 :
-      (activeDays >= 7 || totalCompleted >= 10) ? 1 : 0
+      (activeDays >= 22 && longestStreak >= 7) ? 3 :
+      (activeDays >= 12 && calibrationCount >= 5) ? 2 :
+      (activeDays >= 5) ? 1 : 0
 
-    // 下一级进度
-    const nextLevelTarget = unlockLevel === 0 ? { days: 7, tasks: 10 } :
-      unlockLevel === 1 ? { days: 14, tasks: 25 } :
-      unlockLevel === 2 ? { days: 30, tasks: 50 } : null
-    const unlockProgress = nextLevelTarget ? {
-      days: Math.min(activeDays, nextLevelTarget.days),
-      daysTarget: nextLevelTarget.days,
-      tasks: Math.min(totalCompleted, nextLevelTarget.tasks),
-      tasksTarget: nextLevelTarget.tasks
-    } : null
+    // 各章详细进度（用于profile展示）
+    const unlockProgress = {
+      activeDays, calibrationCount, longestStreak,
+      l1: {
+        days: Math.min(activeDays, 5), daysTarget: 5,
+        pct: Math.min(100, Math.round(activeDays / 5 * 100))
+      },
+      l2: {
+        days: Math.min(activeDays, 12), daysTarget: 12,
+        cals: Math.min(calibrationCount, 5), calsTarget: 5,
+        daysPct: Math.min(100, Math.round(activeDays / 12 * 100)),
+        calsPct: Math.min(100, Math.round(calibrationCount / 5 * 100))
+      },
+      l3: {
+        days: Math.min(activeDays, 22), daysTarget: 22,
+        streak: Math.min(longestStreak, 7), streakTarget: 7,
+        daysPct: Math.min(100, Math.round(activeDays / 22 * 100)),
+        streakPct: Math.min(100, Math.round(longestStreak / 7 * 100))
+      }
+    }
 
     // 情绪数据（最近7天）
     const moodLogs = recentLogs

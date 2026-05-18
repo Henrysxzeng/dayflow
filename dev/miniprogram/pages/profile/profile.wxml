@@ -17,82 +17,130 @@
 
   <!-- 分层解锁系统 -->
   <view style="margin-bottom:32rpx;">
-    <text style="font-size:24rpx; color:#6B7280; font-weight:600; letter-spacing:2rpx; display:block; margin-bottom:16rpx;">个人成长路径</text>
+    <text style="font-size:24rpx; color:#6B7280; font-weight:600; letter-spacing:2rpx; display:block; margin-bottom:8rpx;">个人成长路径</text>
+    <text style="font-size:22rpx; color:#9CA3AF; display:block; margin-bottom:16rpx;">条件基于真实使用质量，无法通过刷任务触发</text>
     <view class="card" style="padding:28rpx;">
 
-      <!-- 第一章 7天 -->
-      <view style="margin-bottom:24rpx;">
-        <view class="row" style="margin-bottom:12rpx;">
-          <text style="font-size:28rpx; margin-right:12rpx;">{{unlockLevel >= 1 ? '✅' : '🔒'}}</text>
-          <view class="flex-1">
-            <text style="font-size:28rpx; font-weight:600; color:#111827;">第一章：起步</text>
-            <text style="font-size:22rpx; color:#6B7280; display:block;">7天 或 完成10件任务</text>
+      <!-- ─── 第一章 ─── -->
+      <view style="margin-bottom:28rpx;">
+        <view class="row-between" style="margin-bottom:12rpx;">
+          <view class="row">
+            <text style="font-size:28rpx; margin-right:12rpx;">{{unlockLevel >= 1 ? '✅' : '🔒'}}</text>
+            <view>
+              <text style="font-size:28rpx; font-weight:700; color:#111827;">第一章：起步</text>
+              <text style="font-size:20rpx; color:#9CA3AF; display:block;">累计 5 天有真实完成记录</text>
+            </view>
           </view>
           <text wx:if="{{unlockLevel >= 1}}" style="font-size:22rpx; color:#16A34A; font-weight:600;">已解锁</text>
         </view>
+        <!-- 解锁内容（始终可见） -->
+        <view style="background:#F8FAFF; border-radius:12rpx; padding:20rpx 24rpx; margin-bottom:12rpx;">
+          <text style="font-size:22rpx; color:#6B7280; display:block; margin-bottom:8rpx;">解锁后获得：</text>
+          <text style="font-size:24rpx; color:#374151; display:block; line-height:36rpx;">📊 你最常拖延哪类任务的初步分析</text>
+          <text style="font-size:24rpx; color:#374151; display:block; line-height:36rpx;">😊 情绪趋势图（看心情与效率的关系）</text>
+          <text style="font-size:24rpx; color:#374151; display:block; line-height:36rpx;">🏆 完整成就系统（7个里程碑全部激活）</text>
+        </view>
+        <!-- 进度 -->
         <view wx:if="{{unlockLevel < 1}}">
           <view class="row-between" style="margin-bottom:6rpx;">
-            <text style="font-size:20rpx; color:#9CA3AF;">天数 {{unlockProgress.days}}/{{unlockProgress.daysTarget}}</text>
-            <text style="font-size:20rpx; color:#9CA3AF;">任务 {{unlockProgress.tasks}}/{{unlockProgress.tasksTarget}}</text>
+            <text style="font-size:20rpx; color:#6B7280;">有效活跃天 {{unlockProgress.l1.days}}/5</text>
+            <text style="font-size:20rpx; color:#2563EB;">{{unlockProgress.l1.pct}}%</text>
           </view>
-          <view style="background:#F3F4F6; border-radius:8rpx; height:8rpx; overflow:hidden;">
-            <view style="background:#2563EB; height:100%; width:{{unlockProgress.days/unlockProgress.daysTarget*100}}%; border-radius:8rpx;"></view>
+          <view style="background:#F3F4F6; border-radius:8rpx; height:10rpx; overflow:hidden;">
+            <view style="background:#2563EB; height:100%; width:{{unlockProgress.l1.pct}}%; border-radius:8rpx;"></view>
           </view>
-          <text style="font-size:20rpx; color:#9CA3AF; margin-top:8rpx; display:block;">解锁：拖延初步分析、情绪趋势初稿</text>
         </view>
-        <text wx:else style="font-size:22rpx; color:#6B7280; display:block; margin-top:6rpx;">✓ 拖延初步分析 · 情绪趋势</text>
       </view>
 
-      <view style="height:1rpx; background:#F3F4F6; margin-bottom:24rpx;"></view>
+      <view style="height:1rpx; background:#F3F4F6; margin-bottom:28rpx;"></view>
 
-      <!-- 第二章 14天 -->
-      <view style="margin-bottom:24rpx;">
-        <view class="row" style="margin-bottom:12rpx;">
-          <text style="font-size:28rpx; margin-right:12rpx;">{{unlockLevel >= 2 ? '✅' : '🔒'}}</text>
-          <view class="flex-1">
-            <text style="font-size:28rpx; font-weight:600; color:#111827;">第二章：深入</text>
-            <text style="font-size:22rpx; color:#6B7280; display:block;">14天 或 完成25件任务</text>
+      <!-- ─── 第二章 ─── -->
+      <view style="margin-bottom:28rpx;">
+        <view class="row-between" style="margin-bottom:12rpx;">
+          <view class="row">
+            <text style="font-size:28rpx; margin-right:12rpx;">{{unlockLevel >= 2 ? '✅' : '🔒'}}</text>
+            <view>
+              <text style="font-size:28rpx; font-weight:700; color:#111827;">第二章：深入</text>
+              <text style="font-size:20rpx; color:#9CA3AF; display:block;">12天使用 + 5次记录实际用时</text>
+            </view>
           </view>
           <text wx:if="{{unlockLevel >= 2}}" style="font-size:22rpx; color:#16A34A; font-weight:600;">已解锁</text>
         </view>
-        <view wx:if="{{unlockLevel === 1 && unlockProgress}}">
-          <view class="row-between" style="margin-bottom:6rpx;">
-            <text style="font-size:20rpx; color:#9CA3AF;">天数 {{unlockProgress.days}}/{{unlockProgress.daysTarget}}</text>
-            <text style="font-size:20rpx; color:#9CA3AF;">任务 {{unlockProgress.tasks}}/{{unlockProgress.tasksTarget}}</text>
-          </view>
-          <view style="background:#F3F4F6; border-radius:8rpx; height:8rpx; overflow:hidden;">
-            <view style="background:#2563EB; height:100%; width:{{unlockProgress.days/unlockProgress.daysTarget*100}}%; border-radius:8rpx;"></view>
-          </view>
-          <text style="font-size:20rpx; color:#9CA3AF; margin-top:8rpx; display:block;">解锁：能量曲线个性化 · 时间校准详细报告</text>
+        <!-- 解锁内容（始终可见） -->
+        <view style="background:#F8FAFF; border-radius:12rpx; padding:20rpx 24rpx; margin-bottom:12rpx;">
+          <text style="font-size:22rpx; color:#6B7280; display:block; margin-bottom:8rpx;">解锁后获得：</text>
+          <text style="font-size:24rpx; color:#374151; display:block; line-height:36rpx;">⏱️ 时间校准分析（你平均低估多少%，AI自动补偿）</text>
+          <text style="font-size:24rpx; color:#374151; display:block; line-height:36rpx;">⚡ 你的专属能量曲线（哪个时段你最高效）</text>
+          <text style="font-size:24rpx; color:#374151; display:block; line-height:36rpx;">📝 更深度的每周AI总结（指出具体规律）</text>
         </view>
-        <text wx:elif="{{unlockLevel >= 2}}" style="font-size:22rpx; color:#6B7280; display:block; margin-top:6rpx;">✓ 能量曲线 · 时间校准详报</text>
-        <text wx:else style="font-size:20rpx; color:#D1D5DB; display:block; margin-top:6rpx;">先完成第一章</text>
+        <!-- 进度（未解锁时显示两个条件进度）-->
+        <view wx:if="{{unlockLevel < 2}}">
+          <view style="margin-bottom:10rpx;">
+            <view class="row-between" style="margin-bottom:4rpx;">
+              <text style="font-size:20rpx; color:#6B7280;">有效活跃天 {{unlockProgress.l2.days}}/12</text>
+              <text style="font-size:20rpx; color:#2563EB;">{{unlockProgress.l2.daysPct}}%</text>
+            </view>
+            <view style="background:#F3F4F6; border-radius:8rpx; height:8rpx; overflow:hidden;">
+              <view style="background:#2563EB; height:100%; width:{{unlockProgress.l2.daysPct}}%; border-radius:8rpx;"></view>
+            </view>
+          </view>
+          <view>
+            <view class="row-between" style="margin-bottom:4rpx;">
+              <text style="font-size:20rpx; color:#6B7280;">完成任务后记录实际用时 {{unlockProgress.l2.cals}}/5</text>
+              <text style="font-size:20rpx; color:#2563EB;">{{unlockProgress.l2.calsPct}}%</text>
+            </view>
+            <view style="background:#F3F4F6; border-radius:8rpx; height:8rpx; overflow:hidden;">
+              <view style="background:#2563EB; height:100%; width:{{unlockProgress.l2.calsPct}}%; border-radius:8rpx;"></view>
+            </view>
+          </view>
+          <text style="font-size:20rpx; color:#9CA3AF; margin-top:8rpx; display:block;">两个条件都满足才解锁</text>
+        </view>
       </view>
 
-      <view style="height:1rpx; background:#F3F4F6; margin-bottom:24rpx;"></view>
+      <view style="height:1rpx; background:#F3F4F6; margin-bottom:28rpx;"></view>
 
-      <!-- 第三章 30天 -->
+      <!-- ─── 第三章 ─── -->
       <view>
-        <view class="row" style="margin-bottom:12rpx;">
-          <text style="font-size:28rpx; margin-right:12rpx;">{{unlockLevel >= 3 ? '🌊' : '🔒'}}</text>
-          <view class="flex-1">
-            <text style="font-size:28rpx; font-weight:600; color:#111827;">第三章：传奇</text>
-            <text style="font-size:22rpx; color:#6B7280; display:block;">30天 或 完成50件任务</text>
+        <view class="row-between" style="margin-bottom:12rpx;">
+          <view class="row">
+            <text style="font-size:28rpx; margin-right:12rpx;">{{unlockLevel >= 3 ? '🌊' : '🔒'}}</text>
+            <view>
+              <text style="font-size:28rpx; font-weight:700; color:#111827;">第三章：传奇</text>
+              <text style="font-size:20rpx; color:#9CA3AF; display:block;">22天使用 + 历史最长Streak达7天</text>
+            </view>
           </view>
-          <text wx:if="{{unlockLevel >= 3}}" style="font-size:22rpx; color:#2563EB; font-weight:600;">心流达人</text>
+          <text wx:if="{{unlockLevel >= 3}}" style="font-size:22rpx; color:#2563EB; font-weight:700;">🌊 心流达人</text>
         </view>
-        <view wx:if="{{unlockLevel === 2 && unlockProgress}}">
-          <view class="row-between" style="margin-bottom:6rpx;">
-            <text style="font-size:20rpx; color:#9CA3AF;">天数 {{unlockProgress.days}}/{{unlockProgress.daysTarget}}</text>
-            <text style="font-size:20rpx; color:#9CA3AF;">任务 {{unlockProgress.tasks}}/{{unlockProgress.tasksTarget}}</text>
-          </view>
-          <view style="background:#F3F4F6; border-radius:8rpx; height:8rpx; overflow:hidden;">
-            <view style="background:#2563EB; height:100%; width:{{unlockProgress.days/unlockProgress.daysTarget*100}}%; border-radius:8rpx;"></view>
-          </view>
-          <text style="font-size:20rpx; color:#9CA3AF; margin-top:8rpx; display:block;">解锁：完整个人洞察 · 🌊 心流达人成就 · 月度Wrapped</text>
+        <!-- 解锁内容（始终可见） -->
+        <view style="background:#F8FAFF; border-radius:12rpx; padding:20rpx 24rpx; margin-bottom:12rpx;">
+          <text style="font-size:22rpx; color:#6B7280; display:block; margin-bottom:8rpx;">解锁后获得：</text>
+          <text style="font-size:24rpx; color:#374151; display:block; line-height:36rpx;">🧠 完整个人洞察报告（AI分析你专属的效率规律）</text>
+          <text style="font-size:24rpx; color:#374151; display:block; line-height:36rpx;">🎁 月度Wrapped（可分享的专属成绩卡）</text>
+          <text style="font-size:24rpx; color:#374151; display:block; line-height:36rpx;">🌊 专属成就"心流达人"徽章</text>
+          <text style="font-size:24rpx; color:#374151; display:block; line-height:36rpx;">🎯 个性化推送（根据你的习惯调整提醒内容）</text>
         </view>
-        <text wx:elif="{{unlockLevel >= 3}}" style="font-size:22rpx; color:#6B7280; display:block; margin-top:6rpx;">✓ 完整洞察 · Wrapped · 专属成就</text>
-        <text wx:else style="font-size:20rpx; color:#D1D5DB; display:block; margin-top:6rpx;">先完成第二章</text>
+        <!-- 进度（两个条件）-->
+        <view wx:if="{{unlockLevel < 3}}">
+          <view style="margin-bottom:10rpx;">
+            <view class="row-between" style="margin-bottom:4rpx;">
+              <text style="font-size:20rpx; color:#6B7280;">有效活跃天 {{unlockProgress.l3.days}}/22</text>
+              <text style="font-size:20rpx; color:#2563EB;">{{unlockProgress.l3.daysPct}}%</text>
+            </view>
+            <view style="background:#F3F4F6; border-radius:8rpx; height:8rpx; overflow:hidden;">
+              <view style="background:#2563EB; height:100%; width:{{unlockProgress.l3.daysPct}}%; border-radius:8rpx;"></view>
+            </view>
+          </view>
+          <view>
+            <view class="row-between" style="margin-bottom:4rpx;">
+              <text style="font-size:20rpx; color:#6B7280;">历史最长Streak {{unlockProgress.l3.streak}}/7天</text>
+              <text style="font-size:20rpx; color:#2563EB;">{{unlockProgress.l3.streakPct}}%</text>
+            </view>
+            <view style="background:#F3F4F6; border-radius:8rpx; height:8rpx; overflow:hidden;">
+              <view style="background:#F97316; height:100%; width:{{unlockProgress.l3.streakPct}}%; border-radius:8rpx;"></view>
+            </view>
+          </view>
+          <text style="font-size:20rpx; color:#9CA3AF; margin-top:8rpx; display:block;">两个条件都满足才解锁</text>
+        </view>
       </view>
 
     </view>
