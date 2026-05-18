@@ -286,17 +286,40 @@ exports.main = async (event, context) => {
                ai_note: (p && p.note) || '' }
     }
 
-    // 三层匹配：精确ID → 标题 → 保底（彻底防止AI幻觉ID导致空计划）
+    // 固定时间任务：直接加入计划，不依赖AI（AI没有它们的ID）
     const mainTasksData = []
-    ;(aiResult.main_plan || []).forEach(function(p) {
-      var task = tasks.find(function(t) { return t._id === p.task_id })
-      if (!task) task = tasks.find(function(t) { return t.title === p.task_id || t.title === (p.task_title || '') })
+    lockedTasks.forEach(function(t) {
+      var endH = 0, endM = 0
+      if (t.locked_start_time) {
+        var parts = t.locked_start_time.split(':')
+        var totalMins = parseInt(parts[0]) * 60 + parseInt(parts[1]) + (t.estimated_minutes || 30)
+        endH = Math.floor(totalMins / 60) % 24
+        endM = totalMins % 60
+      }
+      var endTime = endH > 0 || endM > 0
+        ? (endH < 10 ? '0' : '') + endH + ':' + (endM < 10 ? '0' : '') + endM
+        : null
+      mainTasksData.push(makeEntry(t, {
+        suggested_minutes: t.estimated_minutes,
+        suggested_start_time: t.locked_start_time || null,
+        suggested_end_time: endTime,
+        note: '（固定时间）'
+      }))
+    })
+
+    // 普通任务：通过AI匹配（精确ID → 标题 → 保底）
+    var aiPlanItems = aiResult.main_plan || []
+    aiPlanItems.forEach(function(p) {
+      var task = regularTasks.find(function(t) { return t._id === p.task_id })
+      if (!task) task = regularTasks.find(function(t) { return t.title === p.task_id || t.title === (p.task_title || '') })
       if (task) mainTasksData.push(makeEntry(task, p))
     })
-    if (mainTasksData.length === 0 && regularTasks.length > 0) {
-      var fallback = regularTasks.slice(0, Math.min(5, regularTasks.length))
-      var minsEach = Math.max(15, Math.floor(availableHours * 60 * 0.8 / fallback.length))
-      fallback.forEach(function(t) {
+
+    // 保底：AI完全没排出任务时，从全部任务里取（修复regularTasks为空时保底失效的bug）
+    if (mainTasksData.length === 0 && tasks.length > 0) {
+      var allPending = tasks.slice(0, Math.min(5, tasks.length))
+      var minsEach = Math.max(15, Math.floor(availableHours * 60 * 0.8 / allPending.length))
+      allPending.forEach(function(t) {
         mainTasksData.push(makeEntry(t, { suggested_minutes: Math.min(minsEach, t.estimated_minutes), note: '（自动安排）' }))
       })
     }
