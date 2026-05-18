@@ -140,8 +140,13 @@ Page({
     const newTask = getApp().globalData.newTaskForToday
     if (newTask) {
       getApp().globalData.newTaskForToday = null
-      // 无论planReady状态，统一存入pendingNewTaskNotice，由applyPlan或initPage消费
-      this.setData({ pendingNewTaskNotice: newTask })
+      if (this.data.planReady) {
+        // 计划已加载，直接弹（500ms延迟确保页面过渡完成，hideToast会先清掉"已添加"提示）
+        const task = newTask
+        setTimeout(() => this._showNewTaskModal(task), 500)
+      } else {
+        this.setData({ pendingNewTaskNotice: newTask })
+      }
     }
 
     // 处理从任务列表跳转的番茄钟请求
@@ -449,6 +454,7 @@ Page({
   },
 
   _showNewTaskModal(task) {
+    wx.hideToast()  // 先关掉"已添加"toast，避免与modal冲突
     wx.showModal({
       title: '新任务已添加',
       content: `"${task.title}" 要加入今日计划吗？`,

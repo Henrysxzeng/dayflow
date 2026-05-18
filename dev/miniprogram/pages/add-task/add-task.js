@@ -178,7 +178,8 @@ Page({
     const m = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55][mIdx] || 0
     const total = h * 60 + m || 5
     this._setDuration(total)
-    this.setData({ showDurationPicker: false })
+    // 通过picker选的，强制自定义chip高亮（即使是标准时长）
+    this.setData({ showDurationPicker: false, durationIsNonStandard: true })
   },
 
   cancelDurationPicker() { this.setData({ showDurationPicker: false }) },
