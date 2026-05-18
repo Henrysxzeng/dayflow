@@ -45,7 +45,12 @@
   <!-- 时间约束输入步骤 -->
   <view wx:elif="{{waitingForSchedule}}">
     <view class="card" style="margin-bottom:24rpx;">
-      <text style="font-size:26rpx; color:#6B7280; display:block; margin-bottom:16rpx;">今天有固定安排吗？告诉 Flow，它会帮你把任务塞进空档。</text>
+      <view class="row-between" style="margin-bottom:16rpx;">
+        <text style="font-size:26rpx; color:#6B7280; flex:1; line-height:40rpx;">今天有固定安排吗？告诉 Flow，帮你把任务塞进空档。</text>
+        <view bindtap="handleSkipSchedule" style="padding:8rpx 0 8rpx 24rpx; flex-shrink:0;">
+          <text style="font-size:26rpx; color:#9CA3AF;">跳过 →</text>
+        </view>
+      </view>
       <textarea
         style="width:100%; min-height:160rpx; font-size:30rpx; color:#111827; line-height:48rpx; box-sizing:border-box;"
         placeholder="例：上午9-11点开会，下午3点接孩子&#10;或：全天自由，没有固定安排"
@@ -53,12 +58,12 @@
         bindinput="handleScheduleInput"
         value="{{scheduleInput}}"
         auto-focus="{{true}}"
+        adjust-position="{{true}}"
       />
     </view>
-    <view class="btn-primary" style="margin-bottom:20rpx;" bindtap="handleGenerateWithSchedule">
+    <view class="btn-primary" bindtap="handleGenerateWithSchedule">
       帮我安排具体时间
     </view>
-    <view class="btn-ghost" bindtap="handleSkipSchedule">跳过，只给我任务清单</view>
   </view>
 
   <!-- 正常内容区域 -->
@@ -219,6 +224,33 @@
 
 </view>
 
+<!-- 情绪收集浮层（全部完成后先弹这个）-->
+<view wx:if="{{showMoodPicker}}" style="position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); display:flex; align-items:flex-end; z-index:1001;">
+  <view style="background:#FFF; border-radius:32rpx 32rpx 0 0; padding:48rpx 40rpx 80rpx; width:100%;">
+    <text style="font-size:32rpx; font-weight:700; color:#111827; display:block; text-align:center; margin-bottom:8rpx;">今天整体感觉怎么样？</text>
+    <text style="font-size:24rpx; color:#6B7280; display:block; text-align:center; margin-bottom:40rpx;">Flow 会用这个数据帮你找到最高效的时机</text>
+    <view class="row" style="gap:16rpx; margin-bottom:32rpx;">
+      <view bindtap="handleMoodSelect" data-mood="great" style="flex:1; background:#F0FDF4; border-radius:20rpx; padding:28rpx 8rpx; text-align:center;">
+        <text style="font-size:48rpx; display:block; margin-bottom:8rpx;">⚡</text>
+        <text style="font-size:22rpx; color:#15803D; font-weight:600;">精力充沛</text>
+      </view>
+      <view bindtap="handleMoodSelect" data-mood="good" style="flex:1; background:#EFF6FF; border-radius:20rpx; padding:28rpx 8rpx; text-align:center;">
+        <text style="font-size:48rpx; display:block; margin-bottom:8rpx;">😊</text>
+        <text style="font-size:22rpx; color:#1D4ED8; font-weight:600;">还不错</text>
+      </view>
+      <view bindtap="handleMoodSelect" data-mood="tired" style="flex:1; background:#FEF3C7; border-radius:20rpx; padding:28rpx 8rpx; text-align:center;">
+        <text style="font-size:48rpx; display:block; margin-bottom:8rpx;">😴</text>
+        <text style="font-size:22rpx; color:#92400E; font-weight:600;">有点疲</text>
+      </view>
+      <view bindtap="handleMoodSelect" data-mood="exhausted" style="flex:1; background:#FEE2E2; border-radius:20rpx; padding:28rpx 8rpx; text-align:center;">
+        <text style="font-size:48rpx; display:block; margin-bottom:8rpx;">😩</text>
+        <text style="font-size:22rpx; color:#991B1B; font-weight:600;">很疲惫</text>
+      </view>
+    </view>
+    <view class="btn-ghost" bindtap="handleSkipMood">跳过</view>
+  </view>
+</view>
+
 <!-- 成就解锁浮层 -->
 <view wx:if="{{showAchievement && currentAchievement}}" style="position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.65); display:flex; align-items:center; justify-content:center; z-index:1000; padding:64rpx;">
   <view style="background:#FFF; border-radius:32rpx; padding:64rpx 48rpx; width:100%; text-align:center;">
@@ -272,10 +304,14 @@
   <view style="background:#F0FDF4; border-radius:16rpx; padding:28rpx 32rpx; margin-bottom:32rpx; width:100%;">
     <text style="font-size:28rpx; color:#166534; line-height:44rpx;">{{completionMessage}}</text>
   </view>
-  <view class="btn-primary" style="width:100%; margin-bottom:20rpx;" bindtap="handleRequestNextPush">授权明天早 8 点的计划推送</view>
-  <!-- 分享按钮：必须用 button open-type="share" -->
-  <button open-type="share" style="width:100%; background:#F8FAFF; border:2rpx solid #BFDBFE; border-radius:20rpx; height:88rpx; display:flex; align-items:center; justify-content:center; margin-bottom:20rpx; font-size:28rpx; color:#2563EB; box-sizing:border-box;">
+  <view class="btn-primary" style="width:100%; margin-bottom:16rpx;" bindtap="handleRequestNextPush">授权明天早 8 点的计划推送</view>
+  <!-- 分享今天成绩 -->
+  <button open-type="share" style="width:100%; background:#F8FAFF; border:2rpx solid #BFDBFE; border-radius:20rpx; height:88rpx; display:flex; align-items:center; justify-content:center; margin-bottom:16rpx; font-size:28rpx; color:#2563EB; box-sizing:border-box;">
     📤 分享今天的成绩
+  </button>
+  <!-- 好友挑战裂变 -->
+  <button open-type="share" style="width:100%; background:#FFF7ED; border:2rpx solid #FED7AA; border-radius:20rpx; height:88rpx; display:flex; align-items:center; justify-content:center; margin-bottom:16rpx; font-size:28rpx; color:#C2410C; box-sizing:border-box;">
+    🏆 挑战朋友加入本月挑战
   </button>
   <view class="btn-ghost" bindtap="dismissCompletion">先不用了</view>
 </view>

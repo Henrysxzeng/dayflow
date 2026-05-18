@@ -1,5 +1,11 @@
 <view style="padding:32rpx 32rpx 160rpx;">
 
+  <!-- 快速模板按钮 -->
+  <view bindtap="openTemplates" style="background:#EFF6FF; border-radius:16rpx; padding:20rpx 28rpx; margin-bottom:32rpx; display:flex; align-items:center; justify-content:space-between;">
+    <text style="font-size:28rpx; color:#2563EB;">📋 从模板快速添加</text>
+    <text style="color:#2563EB;">›</text>
+  </view>
+
   <!-- 任务名称 -->
   <view style="margin-bottom:40rpx;">
     <view style="font-size:26rpx; color:#6B7280; margin-bottom:12rpx;">任务名称</view>
@@ -101,4 +107,38 @@
     添加任务
   </view>
 
+</view>
+
+<!-- 模板选择浮层 -->
+<view wx:if="{{showTemplates}}" style="position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:999;" bindtap="closeTemplates">
+  <view style="position:absolute; bottom:0; left:0; right:0; background:#FFF; border-radius:32rpx 32rpx 0 0; padding:32rpx 0 80rpx;" catchtap="">
+    <view class="row-between" style="padding:0 32rpx 24rpx;">
+      <text style="font-size:32rpx; font-weight:700; color:#111827;">选择模板</text>
+      <text bindtap="closeTemplates" style="font-size:28rpx; color:#6B7280;">关闭</text>
+    </view>
+    <!-- 分类 tabs -->
+    <scroll-view scroll-x style="white-space:nowrap; padding:0 32rpx; margin-bottom:24rpx;">
+      <view
+        wx:for="{{templateCategories}}"
+        wx:key="name"
+        bindtap="switchTemplateCategory"
+        data-index="{{index}}"
+        style="display:inline-block; padding:12rpx 28rpx; border-radius:40rpx; margin-right:16rpx; background:{{activeTemplateCategory === index ? '#2563EB' : '#F3F4F6'}}; font-size:26rpx; color:{{activeTemplateCategory === index ? '#FFF' : '#374151'}};"
+      >{{item.name}}</view>
+    </scroll-view>
+    <!-- 模板列表 -->
+    <view style="padding:0 32rpx; max-height:500rpx; overflow:hidden;">
+      <view
+        wx:for="{{templateCategories[activeTemplateCategory].templates}}"
+        wx:key="title"
+        bindtap="applyTemplate"
+        data-title="{{item.title}}"
+        data-minutes="{{item.minutes}}"
+        style="padding:24rpx 0; border-bottom:1rpx solid #F3F4F6; display:flex; align-items:center; justify-content:space-between;"
+      >
+        <text style="font-size:30rpx; color:#111827;">{{item.title}}</text>
+        <text style="font-size:24rpx; color:#6B7280;">{{item.minutes < 60 ? item.minutes + '分钟' : (item.minutes/60) + '小时'}}</text>
+      </view>
+    </view>
+  </view>
 </view>

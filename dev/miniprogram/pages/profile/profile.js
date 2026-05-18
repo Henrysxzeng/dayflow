@@ -20,6 +20,11 @@ Page({
     calibrationProgress: 0,
     achievements: [],
     achievementBadges: [],
+    unlockLevel: 0,
+    unlockProgress: null,
+    activeDays: 0,
+    moodLogs: [],
+    moodSummary: '',
     challenge: null,
     challengeHasJoined: false,
     challengeProgress: 0,
@@ -72,7 +77,15 @@ Page({
       const achievements = result.achievements || []
       const achievementBadges = achievements.map(id => BADGE_MAP[id]).filter(Boolean)
 
-      this.setData({ achievements, achievementBadges, streak: result.streak || 0,
+      const moodMap = { great: '⚡', good: '😊', tired: '😴', exhausted: '😩' }
+      const moodLogs = (result.moodLogs || []).map(l => ({ ...l, emoji: moodMap[l.mood] || '' }))
+
+      this.setData({
+        unlockLevel: result.unlockLevel || 0,
+        unlockProgress: result.unlockProgress || null,
+        activeDays: result.activeDays || 0,
+        moodLogs,
+        achievements, achievementBadges, streak: result.streak || 0,
         totalDays: result.totalDays || 0,
         totalCompleted: result.totalCompleted || 0,
         settings: result.settings || this.data.settings,

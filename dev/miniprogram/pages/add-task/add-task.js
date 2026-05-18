@@ -27,11 +27,57 @@ Page({
       { label: '非常高', value: 4 }
     ],
     showCustomDuration: false,
-    customDurationText: ''
+    customDurationText: '',
+    showTemplates: false,
+    templateCategories: [
+      {
+        name: '📚 学习', templates: [
+          { title: '阅读书籍', minutes: 30 }, { title: '英语学习', minutes: 20 },
+          { title: '整理笔记', minutes: 15 }, { title: '复习知识点', minutes: 45 },
+          { title: '在线课程', minutes: 60 }
+        ]
+      },
+      {
+        name: '💼 工作', templates: [
+          { title: '写周报', minutes: 30 }, { title: '回复邮件', minutes: 20 },
+          { title: '整理文件', minutes: 15 }, { title: '准备会议材料', minutes: 30 },
+          { title: '项目进度汇报', minutes: 45 }
+        ]
+      },
+      {
+        name: '🏃 健康', templates: [
+          { title: '冥想放松', minutes: 15 }, { title: '散步', minutes: 30 },
+          { title: '健身运动', minutes: 60 }, { title: '拉伸运动', minutes: 15 },
+          { title: '早睡准备', minutes: 20 }
+        ]
+      },
+      {
+        name: '🏠 生活', templates: [
+          { title: '购物采买', minutes: 30 }, { title: '整理房间', minutes: 30 },
+          { title: '处理账单', minutes: 20 }, { title: '做饭', minutes: 45 },
+          { title: '联系家人朋友', minutes: 20 }
+        ]
+      }
+    ],
+    activeTemplateCategory: 0
   },
 
   handleTitleInput(e) {
     this.setData({ 'form.title': e.detail.value })
+  },
+
+  openTemplates() { this.setData({ showTemplates: true }) },
+  closeTemplates() { this.setData({ showTemplates: false }) },
+  switchTemplateCategory(e) { this.setData({ activeTemplateCategory: e.currentTarget.dataset.index }) },
+
+  applyTemplate(e) {
+    const { title, minutes } = e.currentTarget.dataset
+    this.setData({
+      'form.title': title,
+      'form.estimatedMinutes': minutes,
+      showCustomDuration: false,
+      showTemplates: false
+    })
   },
 
   handleDeadlineChange(e) {

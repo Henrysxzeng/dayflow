@@ -59,12 +59,50 @@ exports.main = async (event, context) => {
     const logsRes = await db.collection('daily_logs')
       .where({ user_id: openid })
       .orderBy('log_date', 'desc')
-      .limit(7)
+      .limit(30)
       .get()
 
     const logs = logsRes.data || []
-    const weekCompleted = logs.reduce((s, l) => s + (l.tasks_completed || 0), 0)
-    const weekPlanned = logs.reduce((s, l) => s + (l.tasks_planned || 0), 0)
+    const recentLogs = logs.slice(0, 7)
+    const weekCompleted = recentLogs.reduce((s, l) => s + (l.tasks_completed || 0), 0)
+    const weekPlanned = recentLogs.reduce((s, l) => s + (l.tasks_planned || 0), 0)
+
+    // 活跃天数（有记录的天数，用于解锁判断）
+    const activeDays = logs.length
+    const totalCompleted = user.total_completed || 0
+
+    // 分层解锁等级
+    const unlockLevel =
+      (activeDays >= 30 || totalCompleted >= 50) ? 3 :
+      (activeDays >= 14 || totalCompleted >= 25) ? 2 :
+      (activeDays >= 7 || totalCompleted >= 10) ? 1 : 0
+
+    // 下一级进度
+    const nextLevelTarget = unlockLevel === 0 ? { days: 7, tasks: 10 } :
+      unlockLevel === 1 ? { days: 14, tasks: 25 } :
+      unlockLevel === 2 ? { days: 30, tasks: 50 } : null
+    const unlockProgress = nextLevelTarget ? {
+      days: Math.min(activeDays, nextLevelTarget.days),
+      daysTarget: nextLevelTarget.days,
+      tasks: Math.min(totalCompleted, nextLevelTarget.tasks),
+      tasksTarget: nextLevelTarget.tasks
+    } : null
+
+    // 情绪数据（最近7天）
+    const moodLogs = recentLogs
+      .filter(l => l.mood)
+      .map(l => ({ date: l.log_date, mood: l.mood }))
+
+    // 番茄钟持久化
+    const activePomodoroRaw = user.active_pomodoro || null
+    let activePomodoro = null
+    if (activePomodoroRaw && activePomodoroRaw.start_time) {
+      const elapsed = Math.floor((Date.now() - activePomodoroRaw.start_time) / 1000)
+      const remaining = (activePomodoroRaw.total_seconds || 25 * 60) - elapsed
+      if (remaining > 0) {
+        activePomodoro = { ...activePomodoroRaw, remaining, elapsed }
+      }
+    }
 
     // 取出待显示的成就，然后清空队列
     const pendingAchievements = user.pending_achievements || []
@@ -81,11 +119,16 @@ exports.main = async (event, context) => {
       pending_failure_tags: user.pending_failure_tags || [],
       pending_achievements: pendingAchievements,
       achievements: user.achievements || [],
-      total_completed: user.total_completed || 0,
+      total_completed: totalCompleted,
       calibrationDataPoints,
       calibrationUnlocked,
+      unlockLevel,
+      unlockProgress,
+      activeDays,
+      moodLogs,
+      activePomodoro,
       settings: user.settings || {},
-      totalDays: logs.length,
+      totalDays: recentLogs.length,
       totalCompleted: weekCompleted,
       weekStats: {
         completed: weekCompleted,

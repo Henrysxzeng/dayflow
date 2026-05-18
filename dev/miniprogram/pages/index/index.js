@@ -2,11 +2,16 @@ const { callCloud } = require('../../utils/api')
 const { formatDateDisplay, todayString, minutesToDisplay } = require('../../utils/date')
 
 const HOUR_OPTIONS = [
-  { label: '1小时', value: 1 },
-  { label: '2小时', value: 2 },
-  { label: '3小时', value: 3 },
-  { label: '4小时', value: 4 },
-  { label: '6小时', value: 6 },
+  { label: '0.5h', value: 0.5 },
+  { label: '1h', value: 1 },
+  { label: '1.5h', value: 1.5 },
+  { label: '2h', value: 2 },
+  { label: '2.5h', value: 2.5 },
+  { label: '3h', value: 3 },
+  { label: '3.5h', value: 3.5 },
+  { label: '4h', value: 4 },
+  { label: '5h', value: 5 },
+  { label: '6h', value: 6 },
   { label: '自定义', value: 0 }
 ]
 
@@ -65,6 +70,9 @@ Page({
     currentAchievement: null,
     // 分享
     shareImagePath: '',
+    // 情绪收集
+    showMoodPicker: false,
+    todayMood: '',
     // 周五预载
     showFridayPlanning: false,
     fridayNote: '',
@@ -136,6 +144,24 @@ Page({
       const app = getApp()
       app.globalData.openid = result.openid
       this.setData({ streak: result.streak || 0, jokerCount: result.jokers_remaining || 0 })
+
+      // 番茄钟持久化恢复
+      if (result.activePomodoro && !this.data.showPomodoro) {
+        const p = result.activePomodoro
+        this.setData({
+          showPomodoro: true,
+          pomodoroTaskId: p.task_id,
+          pomodoroTaskTitle: p.task_title,
+          pomodoroPhase: p.phase || 'focus',
+          pomodoroStartTime: p.start_time,
+          pomodoroSeconds: p.remaining,
+          pomodoroDisplay: `${String(Math.floor(p.remaining / 60)).padStart(2, '0')}:${String(p.remaining % 60).padStart(2, '0')}`,
+          pomodoroProgress: 1 - p.remaining / (p.total_seconds || 25 * 60)
+        })
+        this._startPomodoroTick()
+        wx.hideLoading()
+        return
+      }
 
       // 成就解锁检查
       const pendingAchievements = result.pending_achievements || []
@@ -437,12 +463,27 @@ Page({
 
   // ── 完成庆祝 ──
   showCompletionScreen(count) {
+    // 先弹情绪选择，选完再庆祝
+    this.setData({ showMoodPicker: true, completedCount: count })
+  },
+
+  handleMoodSelect(e) {
+    const mood = e.currentTarget.dataset.mood
+    this.setData({ showMoodPicker: false, todayMood: mood })
+    callCloud('saveMood', { mood }).catch(() => {})
+    this.showActualCompletion(this.data.completedCount)
+  },
+
+  handleSkipMood() {
+    this.setData({ showMoodPicker: false })
+    this.showActualCompletion(this.data.completedCount)
+  },
+
+  showActualCompletion(count) {
     const msg = COMPLETION_MESSAGES[Math.floor(Math.random() * COMPLETION_MESSAGES.length)]
-    this.setData({ showCompletion: true, completedCount: count, completionMessage: msg })
-    // 检查是否周五，完成后提示预载下周
+    this.setData({ showCompletion: true, completionMessage: msg })
     const day = new Date().getDay()
     if (day === 5) this.setData({ showFridayPlanning: true })
-    // 后台生成分享图
     this.generateShareImage(count)
   },
 
@@ -551,6 +592,7 @@ Page({
   handleStartPomodoro(e) {
     const { id, title } = e.currentTarget.dataset
     wx.vibrateShort({ type: 'light' })
+    const startTime = Date.now()
     this.setData({
       showPomodoro: true,
       pomodoroTaskId: id,
@@ -559,9 +601,11 @@ Page({
       pomodoroSeconds: 25 * 60,
       pomodoroDisplay: '25:00',
       pomodoroProgress: 0,
-      pomodoroStartTime: Date.now()
+      pomodoroStartTime: startTime
     })
     this._startPomodoroTick()
+    // 云端持久化
+    callCloud('savePomodoroState', { action: 'start', taskId: id, taskTitle: title, startTime, phase: 'focus', totalSeconds: 25 * 60 }).catch(() => {})
   },
 
   _startPomodoroTick() {
@@ -637,6 +681,7 @@ Page({
   handleAbandonPomodoro() {
     if (this._pomodoroTimer) { clearInterval(this._pomodoroTimer); this._pomodoroTimer = null }
     this.setData({ showPomodoro: false, pomodoroTaskId: null })
+    callCloud('savePomodoroState', { action: 'end' }).catch(() => {})
   },
 
   handleRequestNextPush() {
