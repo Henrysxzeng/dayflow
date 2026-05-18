@@ -245,10 +245,11 @@ Page({
           return
         }
         const tasksResult = await callCloud('getTasks')
-        const pendingTasks = (tasksResult.tasks || []).filter(t => t.status !== 'completed')
+        const pendingTasks = (tasksResult.tasks || []).filter(function(t) { return t.status !== 'completed' })
         if (pendingTasks.length === 0) {
           this.setData({ showRestDay: true })
         }
+        // 有待办任务但无计划：保持 planReady:false，显示时长选择器（WXML会自动渲染chip）
       }
     } catch (e) {
       wx.hideLoading()
@@ -273,9 +274,15 @@ Page({
       completed: t.status === 'completed'
     }))
 
-    // 任务被删完：plan 存在但没有任何任务数据
+    // 计划存在但任务全空（已完成/被删/新任务还没加入计划）→ 显示时长选择器让用户重新规划
     if (mainTasks.length === 0 && fragmentTasks.length === 0) {
-      this.setData({ showRestDay: true })
+      this.setData({ planReady: false, showRestDay: false, showOnboarding: false })
+      const self = this
+      const notice = this.data.pendingNewTaskNotice
+      if (notice) {
+        this.setData({ pendingNewTaskNotice: null })
+        setTimeout(function() { self._showNewTaskModal(notice) }, 300)
+      }
       return
     }
 
