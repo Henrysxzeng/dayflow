@@ -292,15 +292,18 @@ Page({
       completed: t.status === 'completed'
     }))
 
-    // 计划存在但任务全空（已完成/被删/新任务还没加入计划）→ 显示时长选择器让用户重新规划
+    // 计划存在但任务全空（AI没排进去 / 任务都完成了 / ID匹配不上）
     if (mainTasks.length === 0 && fragmentTasks.length === 0) {
-      this.setData({ planReady: false, showRestDay: false, showOnboarding: false })
+      this.setData({ planReady: false, generating: false, showRestDay: false, showOnboarding: false })
       const self = this
       const notice = this.data.pendingNewTaskNotice
       if (notice) {
         this.setData({ pendingNewTaskNotice: null })
         setTimeout(function() { self._showNewTaskModal(notice) }, 300)
+        return
       }
+      // 告知用户原因，让他换个条件重试
+      wx.showToast({ title: '没有找到可安排的任务，可换个时间试试', icon: 'none', duration: 3000 })
       return
     }
 

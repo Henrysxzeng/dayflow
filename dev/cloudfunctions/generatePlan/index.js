@@ -116,7 +116,7 @@ const buildUserPrompt = (tasks, availableHours, date, tone, scheduleConstraints,
     : ''
 
   const currentTimeSection = context.currentTime
-    ? `\n⚠️ 当前实际时间：${context.currentTime}。严禁安排在此时间之前的任务，所有任务必须从 ${context.currentTime} 之后开始。\n`
+    ? `\n当前实际时间：${context.currentTime}。请只安排在此时间之后开始的任务。若时间已晚，可安排轻松小任务或明日准备工作，不要返回空计划。\n`
     : ''
 
   const availMinutes = context.alreadyCompletedMinutes > 0
