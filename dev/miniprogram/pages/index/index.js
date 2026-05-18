@@ -404,11 +404,12 @@ Page({
   handleHoursSelect(e) {
     const value = e.currentTarget.dataset.value
     if (value === 0) {
-      // 自定义：打开滑动弹窗
       this.setData({ showCustomHoursModal: true, hoursPickerValue: [4, 0] })
       return
     }
-    this.setData({ selectedHoursTemp: value, selectedHours: value, waitingForSchedule: true, scheduleInput: '' })
+    // 直接生成，不再强制走时间约束输入步骤（那一步太容易让用户迷路卡住）
+    this.setData({ selectedHours: value })
+    this.generatePlan(value, this.data.scheduleConstraints || '', 0, 0, this._getCurrentTime())
   },
 
   handleScheduleInput(e) {
@@ -485,8 +486,13 @@ Page({
   },
 
   handleRegenerate() {
-    // 用自定义弹窗代替actionSheet（actionSheet超过6项在部分设备失效）
+    // 修改时长：打开弹窗，也可以顺便修改时间约束
     this.setData({ showCustomHoursModal: true, customHoursVal: String(this.data.availableHours || 3), customMinsVal: '0' })
+  },
+
+  // 时间约束输入（可选）- 现在只有用户主动打开才会出现
+  handleOpenScheduleInput() {
+    this.setData({ waitingForSchedule: true, scheduleInput: this.data.scheduleConstraints || '' })
   },
 
   handleCustomHoursValInput(e) { this.setData({ customHoursVal: e.detail.value }) },

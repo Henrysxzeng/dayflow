@@ -210,6 +210,10 @@
           data-value="{{item.value}}"
         >{{item.label}}</view>
       </scroll-view>
+      <!-- 可选：告诉Flow今天的时间安排（不是强制步骤）-->
+      <view bindtap="handleOpenScheduleInput" style="text-align:center; padding:8rpx 0;">
+        <text style="font-size:22rpx; color:#9CA3AF;">📅 有固定安排？告诉 Flow 帮你避开 →</text>
+      </view>
     </view>
 
     <!-- 计划已生成：时长标签 + 修改 -->
