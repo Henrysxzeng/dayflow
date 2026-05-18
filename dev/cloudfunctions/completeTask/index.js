@@ -82,6 +82,53 @@ exports.main = async (event, context) => {
 
     await db.collection('users').doc(openid).update({ data: updateData })
 
+    // 共同任务：更新状态和默契度
+    try {
+      const taskDoc = await db.collection('tasks').doc(taskId).get()
+      if (taskDoc.data.is_shared) {
+        const stRes = await db.collection('shared_tasks')
+          .where({
+            _id: db.command.or([
+              { creator_task_id: taskId },
+              { invitee_task_id: taskId }
+            ])
+          })
+          .get()
+
+        if (stRes.data && stRes.data.length > 0) {
+          const st = stRes.data[0]
+          const isCreator = st.creator_task_id === taskId
+          const updateField = isCreator ? 'creator_completed' : 'invitee_completed'
+          const otherDone = isCreator ? st.invitee_completed : st.creator_completed
+
+          await db.collection('shared_tasks').doc(st._id).update({
+            data: { [updateField]: true, status: otherDone ? 'both_done' : (isCreator ? 'creator_done' : 'invitee_done') }
+          })
+
+          if (otherDone) {
+            // 双方都完成了，更新默契度
+            const partnerId = isCreator ? st.invitee_id : st.creator_id
+            const fsRes = await db.collection('friendships')
+              .where({
+                _id: db.command.or([
+                  { user_a: openid, user_b: partnerId },
+                  { user_a: partnerId, user_b: openid }
+                ])
+              })
+              .get()
+            if (fsRes.data && fsRes.data.length > 0) {
+              await db.collection('friendships').doc(fsRes.data[0]._id).update({
+                data: {
+                  chemistry: db.command.inc(2),
+                  shared_tasks_completed: db.command.inc(1)
+                }
+              })
+            }
+          }
+        }
+      }
+    } catch (sharedErr) { console.log('shared task update error:', sharedErr.message) }
+
     return { success: true, streak: newStreak, newAchievements }
   } catch (e) {
     console.error('completeTask error:', e)

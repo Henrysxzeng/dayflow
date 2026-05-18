@@ -102,9 +102,33 @@
     />
   </view>
 
+  <!-- 邀请好友 -->
+  <view wx:if="{{!isEditMode}}" style="margin-bottom:40rpx;">
+    <view class="row-between" style="margin-bottom:16rpx;" bindtap="toggleInviteFriend">
+      <text style="font-size:28rpx; color:#374151;">🤝 邀请好友一起完成</text>
+      <view style="width:80rpx; height:44rpx; border-radius:22rpx; background:{{inviteFriend ? '#2563EB' : '#E5E7EB'}}; display:flex; align-items:center; justify-content:{{inviteFriend ? 'flex-end' : 'flex-start'}}; padding:0 4rpx; transition:all 0.2s;">
+        <view style="width:36rpx; height:36rpx; border-radius:18rpx; background:#FFF;"></view>
+      </view>
+    </view>
+    <view wx:if="{{inviteFriend}}">
+      <view wx:if="{{friends.length === 0}}" style="text-align:center; padding:20rpx 0; color:#9CA3AF; font-size:26rpx;">
+        还没有好友，先去"好友"Tab 添加吧
+      </view>
+      <view wx:for="{{friends}}" wx:key="user_id" bindtap="selectFriend" data-id="{{item.user_id}}" data-name="{{item.display_name}}"
+        style="padding:20rpx 24rpx; border-radius:16rpx; margin-bottom:12rpx; background:{{selectedFriendId === item.user_id ? '#EFF6FF' : '#F9FAFB'}}; border:2rpx solid {{selectedFriendId === item.user_id ? '#2563EB' : 'transparent'}}; display:flex; align-items:center;">
+        <text style="font-size:40rpx; margin-right:16rpx;">{{item.avatar_emoji}}</text>
+        <view class="flex-1">
+          <text style="font-size:28rpx; color:#111827; font-weight:{{selectedFriendId === item.user_id ? '600' : '400'}};">{{item.display_name}}</text>
+          <text style="font-size:22rpx; color:#6B7280; display:block;">{{item.level.emoji}} 默契 {{item.chemistry}}</text>
+        </view>
+        <text wx:if="{{selectedFriendId === item.user_id}}" style="color:#2563EB; font-size:28rpx;">✓</text>
+      </view>
+    </view>
+  </view>
+
   <!-- 提交 -->
   <view class="btn-primary" bindtap="handleSubmit" style="{{!form.title ? 'opacity:0.4;' : ''}}">
-    {{isEditMode ? '保存修改' : '添加任务'}}
+    {{isEditMode ? '保存修改' : (inviteFriend && selectedFriendId ? '添加并邀请好友' : '添加任务')}}
   </view>
 
 </view>

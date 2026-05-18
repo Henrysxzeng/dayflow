@@ -31,6 +31,10 @@ Page({
     isEditMode: false,
     editTaskId: null,
     showTemplates: false,
+    inviteFriend: false,
+    friends: [],
+    selectedFriendId: null,
+    selectedFriendName: '',
     templateCategories: [
       {
         name: '📚 学习', templates: [
@@ -88,6 +92,21 @@ Page({
 
   handleTitleInput(e) {
     this.setData({ 'form.title': e.detail.value })
+  },
+
+  toggleInviteFriend() {
+    const next = !this.data.inviteFriend
+    this.setData({ inviteFriend: next, selectedFriendId: null, selectedFriendName: '' })
+    if (next && this.data.friends.length === 0) {
+      const { callCloud } = require('../../utils/api')
+      callCloud('getFriendsData').then(res => {
+        this.setData({ friends: res.friends || [] })
+      }).catch(() => {})
+    }
+  },
+
+  selectFriend(e) {
+    this.setData({ selectedFriendId: e.currentTarget.dataset.id, selectedFriendName: e.currentTarget.dataset.name })
   },
 
   openTemplates() { this.setData({ showTemplates: true }) },
@@ -155,6 +174,18 @@ Page({
 
     wx.showLoading({ title: this.data.isEditMode ? '保存中...' : '添加中...' })
     try {
+      if (this.data.inviteFriend && this.data.selectedFriendId) {
+        await callCloud('createSharedTask', {
+          title: form.title.trim(), deadline,
+          estimatedMinutes: form.estimatedMinutes,
+          importance: form.importance,
+          friendUserId: this.data.selectedFriendId
+        })
+        wx.hideLoading()
+        wx.showToast({ title: `已邀请 ${this.data.selectedFriendName}！`, icon: 'success' })
+        setTimeout(() => wx.navigateBack(), 800)
+        return
+      }
       if (this.data.isEditMode) {
         await callCloud('updateTask', {
           taskId: this.data.editTaskId,

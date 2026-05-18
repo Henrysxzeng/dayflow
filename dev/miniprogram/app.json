@@ -2,8 +2,9 @@
   "pages": [
     "pages/index/index",
     "pages/tasks/tasks",
-    "pages/add-task/add-task",
+    "pages/friends/friends",
     "pages/profile/profile",
+    "pages/add-task/add-task",
     "pages/privacy/privacy"
   ],
   "tabBar": {
@@ -12,18 +13,10 @@
     "backgroundColor": "#FFFFFF",
     "borderStyle": "white",
     "list": [
-      {
-        "pagePath": "pages/index/index",
-        "text": "今日"
-      },
-      {
-        "pagePath": "pages/tasks/tasks",
-        "text": "任务"
-      },
-      {
-        "pagePath": "pages/profile/profile",
-        "text": "我的"
-      }
+      { "pagePath": "pages/index/index", "text": "今日" },
+      { "pagePath": "pages/tasks/tasks", "text": "任务" },
+      { "pagePath": "pages/friends/friends", "text": "好友" },
+      { "pagePath": "pages/profile/profile", "text": "我的" }
     ]
   },
   "window": {
