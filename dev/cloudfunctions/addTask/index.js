@@ -14,7 +14,7 @@ const calcQuadrant = (importance, deadline) => {
 exports.main = async (event, context) => {
   const wxContext = cloud.getWXContext()
   const openid = wxContext.OPENID
-  const { title, deadline, estimatedMinutes, importance, description } = event
+  const { title, deadline, estimatedMinutes, importance, description, lockedStartTime, preferredTime, reminderMinutesBefore } = event
 
   try {
     const isFragment = estimatedMinutes <= 10
@@ -30,6 +30,9 @@ exports.main = async (event, context) => {
       urgency: deadline ? Math.max(1, 4 - Math.ceil((new Date(deadline) - new Date()) / (1000 * 60 * 60 * 24))) : 1,
       quadrant,
       is_fragment: isFragment,
+      locked_start_time: lockedStartTime || null,
+      preferred_time: preferredTime || null,
+      reminder_minutes_before: reminderMinutesBefore || 0,
       status: 'pending',
       fail_history: [],
       fail_count: 0,

@@ -74,6 +74,32 @@ Page({
     })
   },
 
+  startPomodoro(e) {
+    const { id, title } = e.currentTarget.dataset
+    getApp().globalData.pendingPomodoro = { id, title }
+    wx.switchTab({ url: '/pages/index/index' })
+  },
+
+  handleRestoreTask(e) {
+    const id = e.currentTarget.dataset.id
+    const task = this.data.allTasks.find(t => t._id === id)
+    if (!task) return
+    wx.showModal({
+      title: '恢复任务',
+      content: `将"${task.title.substring(0, 15)}"恢复到待完成列表`,
+      confirmText: '恢复',
+      cancelText: '取消',
+      success: async res => {
+        if (!res.confirm) return
+        try {
+          await callCloud('restoreTask', { taskId: id })
+          wx.showToast({ title: '已恢复', icon: 'success' })
+          this.loadTasks()
+        } catch (e) { wx.showToast({ title: '恢复失败', icon: 'none' }) }
+      }
+    })
+  },
+
   handleDeleteTask(e) {
     const id = e.currentTarget.dataset.id
     const task = this.data.allTasks.find(t => t._id === id)

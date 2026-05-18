@@ -4,62 +4,85 @@ const https = require('https')
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 
-const SYSTEM_PROMPT = `你是用户的私人效率助手，名叫 Flow。你像一个真正懂人的高质量秘书，不只是机械地把任务塞进时间格子，而是根据人类的生理和认知规律，帮用户做出真正聪明的安排。
+const SYSTEM_PROMPT = `你是用户的私人效率助手，名叫 Flow。你像一个真正懂人的高质量秘书，根据人类生理规律和用户的真实习惯，帮用户做出真正聪明的安排。
 
-━━━ 人类能量曲线（核心原则，必须遵守）━━━
-• 早上 8:00-12:00：前额叶皮质最活跃，是深度工作的黄金时段。复杂分析、创意写作、需要高度专注的任务必须优先排在这里。
-• 中午 12:00-13:30：午饭和休息时间。绝对不安排工作任务。即使用户没提，也要自动保留并加入 busy_slots，标注"午饭休息"。
-• 下午 13:30-15:00：餐后血糖波动的低谷期，注意力和判断力下降。只适合低难度、机械性任务（回复消息、整理、简单沟通）。
-• 下午 15:00-17:30：大脑的第二个高效期。适合中等难度任务和需要沟通协调的工作。
-• 晚上 20:00 后：认知能力大幅下降，非必要不安排需要深度思考的任务。
+━━━ 人类能量曲线（参考，须结合用户实际习惯）━━━
+• 早上精力通常最好，适合深度工作，但必须以用户实际可用时间为准
+• 午后血糖波动期，适合轻松任务
+• 下午第二个高效期，适合中等难度任务
+• 晚上20:00后认知能力下降，避免安排高难度任务
 
-━━━ 任务类型与时段的智能匹配（必须遵守）━━━
-• 报告、方案、代码、学习、创作 → 早上黄金时段（8:00-12:00）
-• 开会、讨论、沟通、协调 → 下午第二高效期（15:00-17:30）
-• 回复邮件/消息、整理资料、行政事务 → 下午低谷（13:30-15:00），不浪费黄金时段
-• 阅读、学习新知识 → 早上或下午高效期
-• 单个任务超过 90 分钟 → 拆成两段，中间至少休息 15 分钟
+━━━ 关键解析规则（极其重要）━━━
+• 用户说"上午有课/上班/开会/不可用/都在上课" → 自动将 08:00-12:00 视为完全忙碌，不安排任何任务
+• 用户说"下午有事" → 将 13:00-18:00 视为忙碌
+• 用户说"全天有事/全天都忙" → 只排很少的任务，利用碎片时间
+• 用户说的时间约束要精确理解，不要在其提到的忙碌时段安排任何任务
+• 若用户提到"上午上课到11点"，则11点前不排任务，从11点后的空档开始排
 
-━━━ 排期硬性规则（绝对不能违反）━━━
-1. 12:00-13:30 是午饭时间，任何任务都不得占用，必须出现在 busy_slots 里（label:"午饭休息"）
-2. 任务与任务之间至少留 15 分钟过渡，防止一延误全线崩溃
-3. 用户没说明开始时间时，默认从 8:30 开始排
-4. 不安排跨越午饭的单一任务（90分钟任务不能从 11:30 开始）
-5. 不在晚上 22:00 后安排任务，除非用户明确说了夜间时间
-6. 尊重用户填写的所有忙碌时段，同时自动补充午饭时段
+━━━ 午饭/休息时间处理（根据用户习惯，不强制）━━━
+• 如果用户有明确的午休习惯（在用户习惯数据中），在该时段不排任务并加入 busy_slots
+• 如果用户没有午休习惯或数据不足，不要自动加午饭时段，用户自己会管理
+• 不要在没有用户数据支撑时强制插入"午饭休息"这个 busy_slot
 
-━━━ 动态难度校准（根据用户历史调整）━━━
-• 近期完成率 < 50%：用户可能压力过大或计划过满，今天只排 1-2 件最重要的，让用户重建信心，语气要温暖鼓励
+━━━ 任务类型与时段匹配（在用户可用时间内执行）━━━
+• 报告、方案、代码、学习、创作 → 优先排精力好的时段
+• 沟通、讨论、回复消息 → 排精力低谷期
+• 单任务超过 90 分钟 → 拆成两段，中间休息 15 分钟
+
+━━━ 动态难度校准━━━
+• 近期完成率 < 50%：只排 1-2 件最重要的，重建信心
 • 近期完成率 50-75%：正常安排 3-4 件
-• 近期完成率 > 75%：用户状态良好，可安排 4-5 件，适当增加挑战
-• 某任务 fail_count ≥ 2 且原因为 too_hard：建议本次跳过或拆解，降低选中权重
+• 近期完成率 > 75%：可安排 4-5 件，适当挑战
+• 某任务 fail_count ≥ 2 且原因为 too_hard：降低权重
 
-━━━ 任务优先级规则━━━
-• 截止日期近且重要程度高（Q1）→ 最优先，排黄金时段
-• 重要但不紧急（Q2）→ 次优先，排第二高效期
-• 总规划时长不超过可用时间的 80%（留 20% 缓冲）
-• ≤10 分钟的碎片任务放 fragment_plan，不进主计划
+━━━ 排期规则━━━
+1. 任务之间至少留 15 分钟过渡
+2. 用户没说开始时间时，根据用户习惯（起床时间+30分钟）决定开始时间，没有习惯数据则从 8:30 开始
+3. 不在用户睡觉时间后安排任务
+4. 完全尊重用户标注的所有忙碌时段，不在其中安排任何任务
+5. 固定时间任务（locked_time已设置）必须按其固定时段排列，不得移动
 
-━━━ note 字段的写法（核心差异化，必须有说服力）━━━
-note 要引用具体的科学原理解释为什么在这个时段做：
-✓ "前额叶峰值，复杂分析效率最高"
-✓ "会后空档，顺势处理不打断节奏"
-✓ "低谷期做沟通，保留上午的创造力"
-✓ "帕金森定律：今天不动，明天更难动"
-✓ "蔡格尼克效应：先啃硬骨头，完成后负担消失"
-不超过 25 字，直接、有力、有依据。
+━━━ note 字段（必须有说服力）━━━
+引用科学原理解释为什么在这个时段做，不超过25字。
+例："前额叶峰值，复杂分析效率最高"、"低谷期做沟通，保留创造力"
 
 严格返回 JSON，不要有任何多余文字。`
 
-const buildUserPrompt = (tasks, availableHours, date, tone, scheduleConstraints, context) => {
+const buildUserPrompt = (tasks, availableHours, date, tone, scheduleConstraints, context, lockedTasks) => {
   const toneDesc = tone === 'strict' ? '严厉直接' : tone === 'snarky' ? '略带毒舌但有帮助' : '温暖友好'
 
+  // 用户习惯数据
+  const prefs = context.schedulePreferences || {}
+  let habitsSection = ''
+  if (prefs.wake_time || prefs.sleep_time || prefs.has_lunch_break !== undefined) {
+    habitsSection = `\n用户作息习惯：\n`
+    if (prefs.wake_time) habitsSection += `• 通常 ${prefs.wake_time} 起床，请勿在此之前安排任务\n`
+    if (prefs.sleep_time) habitsSection += `• 通常 ${prefs.sleep_time} 睡觉，请勿在此之后安排任务\n`
+    if (prefs.has_lunch_break === true && prefs.lunch_start && prefs.lunch_end) {
+      habitsSection += `• 有固定午休：${prefs.lunch_start}-${prefs.lunch_end}，请在 busy_slots 中加入并避开\n`
+    } else if (prefs.has_lunch_break === false) {
+      habitsSection += `• 该用户通常不固定午休，不要自动添加午饭时段\n`
+    }
+    if (prefs.peak_morning) habitsSection += `• 历史数据：上午是其高效时段\n`
+    if (prefs.peak_evening) habitsSection += `• 历史数据：晚上是其高效时段\n`
+  }
+
+  // 固定时间任务
+  let lockedSection = ''
+  if (lockedTasks && lockedTasks.length > 0) {
+    lockedSection = `\n以下任务已由用户手动固定时间，必须按此安排，不得移动：\n`
+    lockedTasks.forEach(t => {
+      lockedSection += `• "${t.title}"：${t.locked_start_time}（${t.estimated_minutes}分钟）\n`
+    })
+    lockedSection += `请将以上固定任务直接放入 main_plan 对应时段，并加入 busy_slots 防止其他任务占用。\n`
+  }
+
   const constraintSection = scheduleConstraints
-    ? `\n用户今天的时间安排（请严格按此排期，同时自动加入午饭时段）：\n"${scheduleConstraints}"\n`
-    : '\n用户没有提供具体时间约束，请根据人类能量曲线自主安排合理时段，默认从 8:30 开始。\n'
+    ? `\n用户今天的时间安排（严格执行，如有"上午有课/工作"等描述请将整个上午视为忙碌）：\n"${scheduleConstraints}"\n`
+    : `\n用户未提供具体时间约束，根据用户习惯和能量曲线自主安排，注意不要超出起床和睡觉时间。\n`
 
   const freshStartSection = context.freshStart
-    ? `\n特别提示：${context.freshStart}请在 summary 中融入新起点的仪式感，语气积极但不空洞。\n`
+    ? `\n特别提示：${context.freshStart}请在 summary 中融入新起点的仪式感。\n`
     : ''
 
   const completionRateSection = context.recentRate !== null
@@ -67,15 +90,17 @@ const buildUserPrompt = (tasks, availableHours, date, tone, scheduleConstraints,
     : ''
 
   const calibrationSection = context.calibrationFactor
-    ? `\n时间校准提示：该用户历史数据显示实际用时平均比预估多 ${Math.round((context.calibrationFactor - 1) * 100)}%，请将所有任务预估时长乘以 ${context.calibrationFactor} 后再做排期，避免计划做不完。\n`
+    ? `\n时间校准：该用户实际用时平均比预估多 ${Math.round((context.calibrationFactor - 1) * 100)}%，请将任务预估时长乘以 ${context.calibrationFactor}。\n`
     : ''
+
+  const regularTasks = tasks.filter(t => !t.locked_start_time)
 
   return `今天日期：${date}
 今日可用时间：${availableHours} 小时
 AI风格：${toneDesc}
-${freshStartSection}${completionRateSection}${calibrationSection}${constraintSection}
-待办任务清单：
-${JSON.stringify(tasks.map(t => ({
+${habitsSection}${freshStartSection}${completionRateSection}${calibrationSection}${lockedSection}${constraintSection}
+待排任务（固定时间任务已单独列出，以下是需要AI安排的任务）：
+${JSON.stringify(regularTasks.map(t => ({
     id: t._id,
     title: t.title,
     deadline: t.deadline || null,
@@ -84,10 +109,11 @@ ${JSON.stringify(tasks.map(t => ({
     fail_count: t.fail_count || 0,
     last_fail_reason: t.fail_history && t.fail_history.length
       ? t.fail_history[t.fail_history.length - 1].reason
-      : null
+      : null,
+    user_preferred_time: t.preferred_time || null
   })), null, 2)}
 
-请返回如下 JSON：
+请返回如下 JSON（固定时间任务也要包含在 main_plan 中）：
 {
   "main_plan": [
     {
@@ -99,7 +125,7 @@ ${JSON.stringify(tasks.map(t => ({
     }
   ],
   "busy_slots": [
-    {"start": "12:00", "end": "13:30", "label": "午饭休息"}
+    {"start": "XX:00", "end": "XX:30", "label": "描述（只在有真实忙碌时段时才加）"}
   ],
   "fragment_plan": ["碎片任务ID"],
   "summary": "今日计划整体说明，30字以内，温暖自然"
@@ -161,10 +187,15 @@ exports.main = async (event, context) => {
     const user = userRes.data || {}
     const tone = user.settings && user.settings.ai_tone || 'friendly'
     const logs = logsRes.data || []
+    const schedulePreferences = user.schedule_preferences || null
 
     if (tasks.length === 0) return { plan: null, message: 'no_tasks' }
 
-    // 新鲜开始效应检测
+    // 分离固定时间任务和普通任务
+    const lockedTasks = tasks.filter(t => t.locked_start_time)
+    const regularTasks = tasks.filter(t => !t.locked_start_time)
+
+    // 新鲜开始检测
     const d = new Date(date.replace(/-/g, '/'))
     const isMonday = d.getDay() === 1
     const isMonthStart = d.getDate() === 1
@@ -172,13 +203,11 @@ exports.main = async (event, context) => {
     if (isMonday && isMonthStart) freshStart = '今天是周一，也是新月份的第一天，双重新起点。'
     else if (isMonday) freshStart = '今天是周一，新的一周从今天开始。'
     else if (isMonthStart) freshStart = '今天是本月第一天，新的开始。'
-
-    // 周一读取上周五的备注
     if (isMonday && user.next_week_note) {
-      freshStart = (freshStart || '') + `用户上周五设定的本周重点：「${user.next_week_note}」，请在安排中优先考虑。`
+      freshStart = (freshStart || '') + `用户上周五设定的本周重点：「${user.next_week_note}」。`
     }
 
-    // 近期完成率计算
+    // 近期完成率
     const recentPlanned = logs.reduce((s, l) => s + (l.tasks_planned || 0), 0)
     const recentCompleted = logs.reduce((s, l) => s + (l.tasks_completed || 0), 0)
     const recentRate = recentPlanned > 0 ? Math.round((recentCompleted / recentPlanned) * 100) : null
@@ -189,27 +218,25 @@ exports.main = async (event, context) => {
       else rateAdvice = '完成率优秀，可适当增加挑战'
     }
 
-    // 时间校准系数计算
+    // 时间校准系数
     let calibrationFactor = null
     try {
-      const calibratedTasksRes = await db.collection('tasks')
+      const calibratedRes = await db.collection('tasks')
         .where({ user_id: openid, status: 'completed', time_accuracy: db.command.neq(null) })
-        .limit(50)
-        .get()
-
+        .limit(50).get()
       const accuracyMap = { less: -0.25, same: 0, more: 0.3, much_more: 0.65 }
-      const calibrated = (calibratedTasksRes.data || []).filter(t => t.time_accuracy)
+      const calibrated = (calibratedRes.data || []).filter(t => t.time_accuracy)
       if (calibrated.length >= 10) {
         const avgBias = calibrated.reduce((s, t) => s + (accuracyMap[t.time_accuracy] || 0), 0) / calibrated.length
         if (avgBias > 0.05) calibrationFactor = Math.round((1 + avgBias) * 100) / 100
       }
     } catch (e) { }
 
-    const promptContext = { freshStart, recentRate, rateAdvice, calibrationFactor }
+    const promptContext = { freshStart, recentRate, rateAdvice, calibrationFactor, schedulePreferences }
 
     const aiResult = await callDeepSeek([
       { role: 'system', content: SYSTEM_PROMPT },
-      { role: 'user', content: buildUserPrompt(tasks, availableHours, date, tone, scheduleConstraints, promptContext) }
+      { role: 'user', content: buildUserPrompt(tasks, availableHours, date, tone, scheduleConstraints, promptContext, lockedTasks) }
     ])
 
     const mainTaskIds = (aiResult.main_plan || []).map(p => p.task_id)

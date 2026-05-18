@@ -94,9 +94,14 @@ Page({
     pomodoroPhase: 'focus',  // focus | break
     pomodoroCount: 0,
     pomodoroStartTime: 0,
-    // 新用户引导（多步骤）
+    // 新用户引导（4步骤）
     showOnboarding: false,
     onboardingStep: 0,
+    habitsForm: { wakeTime: '07:00', sleepTime: '23:00', hasLunchBreak: null, lunchStart: '12:00', lunchEnd: '13:30' },
+    // 自定义可用时长弹窗（修改时长用）
+    showCustomHoursModal: false,
+    customHoursVal: '3',
+    customMinsVal: '0',
     // 今天休息
     showRestDay: false,
     restDayDone: false,
@@ -125,8 +130,14 @@ Page({
     if (this.data.showPomodoro && this.data.pomodoroStartTime > 0) {
       this._startPomodoroTick()
     }
+    // 处理从任务列表跳转的番茄钟请求
+    const pending = getApp().globalData.pendingPomodoro
+    if (pending) {
+      getApp().globalData.pendingPomodoro = null
+      this.handleStartPomodoro({ currentTarget: { dataset: { id: pending.id, title: pending.title } } })
+      return
+    }
     if (this.data.planReady || this.data.waitingForSchedule) return
-    // 每次回到页面都重新初始化（处理从 add-task 返回后有新任务的情况）
     this.setData({ showOnboarding: false, showRestDay: false })
     this.initPage()
   },
@@ -380,13 +391,28 @@ Page({
 
   handleRegenerate() {
     wx.showActionSheet({
-      itemList: ['1小时', '2小时', '3小时', '4小时', '5小时', '6小时'],
+      itemList: ['自定义', '0.5h', '1h', '1.5h', '2h', '2.5h', '3h', '4h', '5h', '6h'],
       success: res => {
-        const hours = [1, 2, 3, 4, 5, 6][res.tapIndex]
+        if (res.tapIndex === 0) {
+          this.setData({ showCustomHoursModal: true, customHoursVal: '3', customMinsVal: '0' })
+          return
+        }
+        const hours = [0.5, 1, 1.5, 2, 2.5, 3, 4, 5, 6][res.tapIndex - 1]
         this.setData({ planReady: false, selectedHoursTemp: hours, selectedHours: hours, waitingForSchedule: true, scheduleInput: this.data.scheduleConstraints })
       }
     })
   },
+
+  handleCustomHoursValInput(e) { this.setData({ customHoursVal: e.detail.value }) },
+  handleCustomMinsValInput(e) { this.setData({ customMinsVal: e.detail.value }) },
+  confirmCustomHours() {
+    const h = parseFloat(this.data.customHoursVal) || 0
+    const m = parseInt(this.data.customMinsVal) || 0
+    const total = h + m / 60
+    if (total <= 0) { wx.showToast({ title: '请输入有效时长', icon: 'none' }); return }
+    this.setData({ showCustomHoursModal: false, planReady: false, selectedHoursTemp: total, selectedHours: total, waitingForSchedule: true, scheduleInput: this.data.scheduleConstraints })
+  },
+  cancelCustomHours() { this.setData({ showCustomHoursModal: false }) },
 
   handleRegenerateSame() {
     this.generatePlan(this.data.availableHours || 4, this.data.scheduleConstraints)
@@ -745,10 +771,34 @@ Page({
   nextOnboardingStep() {
     const next = this.data.onboardingStep + 1
     if (next >= 3) {
-      wx.navigateTo({ url: '/pages/add-task/add-task' })
+      this.setData({ onboardingStep: 3 }) // 第4步：习惯设置
     } else {
       this.setData({ onboardingStep: next })
     }
+  },
+
+  handleHabitsWakeTime(e) { this.setData({ 'habitsForm.wakeTime': e.detail.value }) },
+  handleHabitsSleepTime(e) { this.setData({ 'habitsForm.sleepTime': e.detail.value }) },
+  handleHabitsLunchBreak(e) { this.setData({ 'habitsForm.hasLunchBreak': e.currentTarget.dataset.val === 'true' }) },
+  handleHabitsLunchStart(e) { this.setData({ 'habitsForm.lunchStart': e.detail.value }) },
+  handleHabitsLunchEnd(e) { this.setData({ 'habitsForm.lunchEnd': e.detail.value }) },
+
+  async saveHabitsAndContinue() {
+    const { habitsForm } = this.data
+    try {
+      await callCloud('saveSchedulePreferences', {
+        wakeTime: habitsForm.wakeTime,
+        sleepTime: habitsForm.sleepTime,
+        hasLunchBreak: habitsForm.hasLunchBreak,
+        lunchStart: habitsForm.lunchStart,
+        lunchEnd: habitsForm.lunchEnd
+      })
+    } catch (e) { }
+    wx.navigateTo({ url: '/pages/add-task/add-task' })
+  },
+
+  skipHabits() {
+    wx.navigateTo({ url: '/pages/add-task/add-task' })
   },
 
   goAddFirstTask() {

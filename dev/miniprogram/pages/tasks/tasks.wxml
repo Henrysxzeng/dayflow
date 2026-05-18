@@ -28,8 +28,13 @@
           <text style="font-size:24rpx; color:#6B7280;">{{item.durationDisplay}}</text>
         </view>
       </view>
-      <view bindtap="handleDeleteTask" data-id="{{item._id}}" style="padding:8rpx 12rpx; margin-left:16rpx;">
-        <text style="font-size:32rpx; color:#D1D5DB;">···</text>
+      <view style="display:flex; align-items:center; gap:8rpx;">
+        <view bindtap="startPomodoro" data-id="{{item._id}}" data-title="{{item.title}}" style="background:#FEF3C7; border-radius:12rpx; padding:8rpx 14rpx;">
+          <text style="font-size:24rpx; color:#92400E;">🍅</text>
+        </view>
+        <view bindtap="handleDeleteTask" data-id="{{item._id}}" style="padding:8rpx 12rpx;">
+          <text style="font-size:32rpx; color:#D1D5DB;">···</text>
+        </view>
       </view>
     </view>
   </view>
@@ -45,8 +50,13 @@
           <text style="font-size:24rpx; color:#6B7280;">{{item.durationDisplay}}</text>
         </view>
       </view>
-      <view bindtap="handleDeleteTask" data-id="{{item._id}}" style="padding:8rpx 12rpx; margin-left:16rpx;">
-        <text style="font-size:32rpx; color:#D1D5DB;">···</text>
+      <view style="display:flex; align-items:center; gap:8rpx;">
+        <view bindtap="startPomodoro" data-id="{{item._id}}" data-title="{{item.title}}" style="background:#FEF3C7; border-radius:12rpx; padding:8rpx 14rpx;">
+          <text style="font-size:24rpx; color:#92400E;">🍅</text>
+        </view>
+        <view bindtap="handleDeleteTask" data-id="{{item._id}}" style="padding:8rpx 12rpx;">
+          <text style="font-size:32rpx; color:#D1D5DB;">···</text>
+        </view>
       </view>
     </view>
   </view>
@@ -67,13 +77,17 @@
 
   <!-- 已完成列表 -->
   <view wx:if="{{activeTab === 'completed'}}">
-    <view wx:for="{{filteredTasks}}" wx:key="_id" class="card row-between" style="padding:24rpx 28rpx; margin-bottom:16rpx; opacity:0.6; align-items:center;">
+    <view wx:for="{{filteredTasks}}" wx:key="_id" class="card row-between" style="padding:24rpx 28rpx; margin-bottom:16rpx; opacity:0.7; align-items:center;">
       <view style="flex:1;">
         <view style="font-size:28rpx; color:#6B7280; text-decoration:line-through;">{{item.title}}</view>
         <text style="font-size:22rpx; color:#9CA3AF;">{{item.completedAtDisplay}}</text>
       </view>
-      <view bindtap="handleDeleteTask" data-id="{{item._id}}" style="padding:8rpx 12rpx; margin-left:16rpx;">
-        <text style="font-size:32rpx; color:#E5E7EB;">···</text>
+      <view style="display:flex; align-items:center; gap:8rpx;">
+        <view bindtap="handleRestoreTask" data-id="{{item._id}}" style="background:#F0FDF4; border-radius:12rpx; padding:8rpx 16rpx;">
+          <text style="font-size:22rpx; color:#16A34A; font-weight:600;">恢复</text>
+        </view>
+        <view bindtap="handleDeleteTask" data-id="{{item._id}}" style="padding:8rpx 12rpx;">
+          <text style="font-size:32rpx; color:#E5E7EB;">···</text>
       </view>
     </view>
   </view>
