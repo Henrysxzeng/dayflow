@@ -28,6 +28,8 @@ Page({
     ],
     showCustomDuration: false,
     customDurationText: '',
+    isEditMode: false,
+    editTaskId: null,
     showTemplates: false,
     templateCategories: [
       {
@@ -60,6 +62,28 @@ Page({
       }
     ],
     activeTemplateCategory: 0
+  },
+
+  onLoad(options) {
+    if (options && options.taskId) {
+      this.setData({ isEditMode: true, editTaskId: options.taskId })
+      // 加载任务数据预填
+      const { callCloud } = require('../../utils/api')
+      callCloud('getTasks').then(res => {
+        const task = (res.tasks || []).find(t => t._id === options.taskId)
+        if (!task) return
+        const dateStr = task.deadline ? task.deadline.split(' ')[0] : ''
+        const timeStr = task.deadline && task.deadline.includes(' ') ? task.deadline.split(' ')[1] : ''
+        this.setData({
+          'form.title': task.title,
+          'form.deadlineDate': dateStr,
+          'form.deadlineTime': timeStr,
+          'form.estimatedMinutes': task.estimated_minutes || 30,
+          'form.importance': task.importance || 2,
+          'form.description': task.description || ''
+        })
+      }).catch(() => {})
+    }
   },
 
   handleTitleInput(e) {
@@ -129,21 +153,30 @@ Page({
         : form.deadlineDate
     }
 
-    wx.showLoading({ title: '添加中...' })
+    wx.showLoading({ title: this.data.isEditMode ? '保存中...' : '添加中...' })
     try {
-      await callCloud('addTask', {
-        title: form.title.trim(),
-        deadline,
-        estimatedMinutes: form.estimatedMinutes,
-        importance: form.importance,
-        description: form.description
-      })
-      wx.hideLoading()
-      wx.showToast({ title: '已添加', icon: 'success' })
+      if (this.data.isEditMode) {
+        await callCloud('updateTask', {
+          taskId: this.data.editTaskId,
+          title: form.title.trim(), deadline,
+          estimatedMinutes: form.estimatedMinutes,
+          importance: form.importance, description: form.description
+        })
+        wx.hideLoading()
+        wx.showToast({ title: '已保存', icon: 'success' })
+      } else {
+        await callCloud('addTask', {
+          title: form.title.trim(), deadline,
+          estimatedMinutes: form.estimatedMinutes,
+          importance: form.importance, description: form.description
+        })
+        wx.hideLoading()
+        wx.showToast({ title: '已添加', icon: 'success' })
+      }
       setTimeout(() => wx.navigateBack(), 800)
     } catch (e) {
       wx.hideLoading()
-      wx.showToast({ title: '添加失败', icon: 'none' })
+      wx.showToast({ title: this.data.isEditMode ? '保存失败' : '添加失败', icon: 'none' })
     }
   }
 })

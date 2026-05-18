@@ -18,28 +18,62 @@
     </view>
   </view>
 
-  <!-- 无任务状态（新用户或所有任务都做完了） -->
-  <view wx:if="{{showOnboarding || showRestDay}}" class="card" style="text-align:center; padding:64rpx 32rpx;">
-    <text style="font-size:80rpx; display:block; margin-bottom:24rpx;">{{showOnboarding ? '👋' : '🌿'}}</text>
-    <text style="font-size:32rpx; font-weight:600; color:#111827; display:block; margin-bottom:16rpx;">
-      {{showOnboarding ? 'Flow 来帮你安排每天' : '今天没有待办任务'}}
-    </text>
-    <text style="font-size:26rpx; color:#6B7280; display:block; line-height:40rpx; margin-bottom:40rpx;">
-      {{showOnboarding ? '先加几个任务，Flow 会帮你选出今天最该做的几件事。' : '休息也是进步的一部分。'}}
-    </text>
-
-    <!-- 加任务按钮（两种状态都显示） -->
-    <view class="btn-primary" style="margin-bottom:20rpx;" bindtap="goAddFirstTask">
-      {{showOnboarding ? '加第一个任务' : '加一个新任务'}}
+  <!-- 新用户引导（3步沉浸式） -->
+  <view wx:if="{{showOnboarding}}">
+    <!-- 步骤指示器 -->
+    <view class="row" style="justify-content:center; margin-bottom:48rpx;">
+      <view style="width:{{onboardingStep === 0 ? '40rpx' : '12rpx'}}; height:12rpx; border-radius:6rpx; background:{{onboardingStep === 0 ? '#2563EB' : '#E5E7EB'}}; margin:0 6rpx; transition:all 0.3s;"></view>
+      <view style="width:{{onboardingStep === 1 ? '40rpx' : '12rpx'}}; height:12rpx; border-radius:6rpx; background:{{onboardingStep === 1 ? '#2563EB' : '#E5E7EB'}}; margin:0 6rpx; transition:all 0.3s;"></view>
+      <view style="width:{{onboardingStep === 2 ? '40rpx' : '12rpx'}}; height:12rpx; border-radius:6rpx; background:{{onboardingStep === 2 ? '#2563EB' : '#E5E7EB'}}; margin:0 6rpx; transition:all 0.3s;"></view>
     </view>
 
-    <!-- 今日休息按钮 -->
-    <view wx:if="{{!restDayDone}}" style="background:#F0FDF4; border-radius:20rpx; height:88rpx; display:flex; align-items:center; justify-content:center;" bindtap="handleRestDay">
-      <text style="font-size:28rpx; color:#16A34A;">今日休息，🔥 Streak 继续延续</text>
+    <!-- Step 0：痛点共鸣 -->
+    <view wx:if="{{onboardingStep === 0}}" style="text-align:center; padding:32rpx 16rpx;">
+      <text style="font-size:96rpx; display:block; margin-bottom:40rpx;">😵‍💫</text>
+      <text style="font-size:36rpx; font-weight:700; color:#111827; display:block; margin-bottom:24rpx; line-height:52rpx;">任务一堆，不知道先做哪个？</text>
+      <text style="font-size:28rpx; color:#6B7280; display:block; line-height:44rpx; margin-bottom:64rpx;">这种焦虑感很正常。大多数人不缺执行力，缺的是一个每天告诉他"就做这几件"的声音。</text>
+      <view class="btn-primary" bindtap="nextOnboardingStep">Flow 来帮你 →</view>
     </view>
-    <view wx:else style="padding:24rpx 0;">
-      <text style="color:#16A34A; font-size:28rpx; font-weight:600;">✓ 今天已标记为休息日</text>
+
+    <!-- Step 1：产品核心价值 -->
+    <view wx:if="{{onboardingStep === 1}}" style="text-align:center; padding:32rpx 16rpx;">
+      <text style="font-size:96rpx; display:block; margin-bottom:40rpx;">🎯</text>
+      <text style="font-size:36rpx; font-weight:700; color:#111827; display:block; margin-bottom:24rpx; line-height:52rpx;">每天早上，Flow 帮你选出最重要的几件事</text>
+      <view style="background:#EFF6FF; border-radius:20rpx; padding:32rpx; margin-bottom:40rpx; text-align:left;">
+        <view class="row" style="margin-bottom:20rpx;">
+          <text style="font-size:32rpx; margin-right:16rpx;">⏰</text>
+          <text style="font-size:26rpx; color:#1D4ED8; line-height:40rpx;">告诉它今天有几小时</text>
+        </view>
+        <view class="row" style="margin-bottom:20rpx;">
+          <text style="font-size:32rpx; margin-right:16rpx;">🧠</text>
+          <text style="font-size:26rpx; color:#1D4ED8; line-height:40rpx;">AI 根据你的能量曲线安排时段</text>
+        </view>
+        <view class="row">
+          <text style="font-size:32rpx; margin-right:16rpx;">✅</text>
+          <text style="font-size:26rpx; color:#1D4ED8; line-height:40rpx;">执行，勾掉，有成就感</text>
+        </view>
+      </view>
+      <view class="btn-primary" bindtap="nextOnboardingStep">听起来不错 →</view>
     </view>
+
+    <!-- Step 2：长期价值+CTA -->
+    <view wx:if="{{onboardingStep === 2}}" style="text-align:center; padding:32rpx 16rpx;">
+      <text style="font-size:96rpx; display:block; margin-bottom:40rpx;">🌱</text>
+      <text style="font-size:36rpx; font-weight:700; color:#111827; display:block; margin-bottom:24rpx; line-height:52rpx;">用得越久，Flow 越懂你</text>
+      <text style="font-size:28rpx; color:#6B7280; display:block; line-height:44rpx; margin-bottom:48rpx;">7天后分析你的拖延规律，14天后优化你的能量时段，30天后 Flow 真正成为你的私人助手。</text>
+      <view class="btn-primary" style="margin-bottom:20rpx;" bindtap="goAddFirstTask">加第一个任务，开始吧</view>
+      <text style="font-size:24rpx; color:#9CA3AF;">数据都存在云端，换手机也不丢</text>
+    </view>
+  </view>
+
+  <!-- 今天无任务（老用户）-->
+  <view wx:elif="{{showRestDay}}" class="card" style="text-align:center; padding:64rpx 32rpx;">
+    <text style="font-size:80rpx; display:block; margin-bottom:24rpx;">🌿</text>
+    <text style="font-size:30rpx; font-weight:600; color:#111827; display:block; margin-bottom:12rpx;">今天没有待办任务</text>
+    <text style="font-size:26rpx; color:#6B7280; display:block; margin-bottom:48rpx; line-height:40rpx;">休息也是进步的一部分。</text>
+    <view wx:if="{{!restDayDone}}" class="btn-primary" style="margin-bottom:20rpx;" bindtap="handleRestDay">今日休息，🔥 Streak 继续延续</view>
+    <view wx:else style="padding:24rpx 0;"><text style="color:#16A34A; font-size:28rpx; font-weight:600;">✓ 今天已标记为休息日</text></view>
+    <view class="btn-ghost" style="margin-top:8rpx;" bindtap="goAddFirstTask">或者加一个新任务</view>
   </view>
 
   <!-- 时间约束输入步骤 -->

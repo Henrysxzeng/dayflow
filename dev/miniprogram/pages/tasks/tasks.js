@@ -78,16 +78,25 @@ Page({
     const id = e.currentTarget.dataset.id
     const task = this.data.allTasks.find(t => t._id === id)
     if (!task) return
-    wx.showModal({
-      title: '删除任务',
-      content: `"${task.title.substring(0, 20)}" 删除后不可恢复`,
-      confirmText: '删除',
-      confirmColor: '#DC2626',
-      cancelText: '取消',
-      success: async res => {
-        if (res.confirm) {
-          await callCloud('deleteTask', { taskId: id })
-          this.loadTasks()
+    wx.showActionSheet({
+      itemList: ['编辑任务', '删除任务'],
+      success: res => {
+        if (res.tapIndex === 0) {
+          wx.navigateTo({ url: `/pages/add-task/add-task?taskId=${id}` })
+        } else {
+          wx.showModal({
+            title: '删除任务',
+            content: `"${task.title.substring(0, 20)}" 删除后不可恢复`,
+            confirmText: '删除',
+            confirmColor: '#DC2626',
+            cancelText: '取消',
+            success: async r => {
+              if (r.confirm) {
+                await callCloud('deleteTask', { taskId: id })
+                this.loadTasks()
+              }
+            }
+          })
         }
       }
     })

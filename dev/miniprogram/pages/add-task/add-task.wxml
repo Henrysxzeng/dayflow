@@ -104,7 +104,7 @@
 
   <!-- 提交 -->
   <view class="btn-primary" bindtap="handleSubmit" style="{{!form.title ? 'opacity:0.4;' : ''}}">
-    添加任务
+    {{isEditMode ? '保存修改' : '添加任务'}}
   </view>
 
 </view>

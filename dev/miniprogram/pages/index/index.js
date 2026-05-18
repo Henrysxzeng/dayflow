@@ -89,8 +89,9 @@ Page({
     pomodoroPhase: 'focus',  // focus | break
     pomodoroCount: 0,
     pomodoroStartTime: 0,
-    // 新用户引导
+    // 新用户引导（多步骤）
     showOnboarding: false,
+    onboardingStep: 0,
     // 今天休息
     showRestDay: false,
     restDayDone: false,
@@ -706,6 +707,15 @@ Page({
       this.setData({ restDayDone: true, streak: res.streak || this.data.streak })
       wx.showToast({ title: '好好休息 🌙', icon: 'none', duration: 2000 })
     } catch (e) { wx.hideLoading() }
+  },
+
+  nextOnboardingStep() {
+    const next = this.data.onboardingStep + 1
+    if (next >= 3) {
+      wx.navigateTo({ url: '/pages/add-task/add-task' })
+    } else {
+      this.setData({ onboardingStep: next })
+    }
   },
 
   goAddFirstTask() {
