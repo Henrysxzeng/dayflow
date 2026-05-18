@@ -5,7 +5,9 @@ const STANDARD_DURATIONS = [5, 15, 30, 60, 90, 120, 180]
 
 const calcEndTime = (startTime, minutes) => {
   if (!startTime || !minutes) return ''
-  const [h, m] = startTime.split(':').map(Number)
+  const parts = startTime.split(':').map(Number)
+  const h = parts[0]
+  const m = parts[1]
   const total = h * 60 + m + minutes
   const eh = Math.floor(total / 60) % 24
   const em = total % 60
@@ -165,7 +167,8 @@ Page({
   },
 
   handleDurationPickerChange(e) {
-    const [hIdx, mIdx] = e.detail.value
+    const hIdx = e.detail.value[0]
+    const mIdx = e.detail.value[1]
     const h = hIdx
     const m = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55][mIdx] || 0
     const total = h * 60 + m || 5

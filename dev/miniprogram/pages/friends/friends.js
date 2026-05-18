@@ -28,11 +28,15 @@ Page({
   async loadAll() {
     this.setData({ loading: true })
     try {
-      const [profileRes, friendsRes, historyRes] = await Promise.all([
+      const parallelRes = await Promise.all([
         callCloud('updateProfile', {}),
         callCloud('getFriendsData'),
         callCloud('getSharedTaskHistory')
       ])
+
+      const profileRes = parallelRes[0]
+      const friendsRes = parallelRes[1]
+      const historyRes = parallelRes[2]
 
       this.setData({
         myFriendCode: profileRes.friend_code || '',

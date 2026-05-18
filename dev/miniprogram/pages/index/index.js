@@ -421,7 +421,8 @@ Page({
   handleCustomHoursValInput(e) { this.setData({ customHoursVal: e.detail.value }) },
   handleCustomMinsValInput(e) { this.setData({ customMinsVal: e.detail.value }) },
   confirmCustomHours() {
-    const [hIdx, mIdx] = this.data.hoursPickerValue
+    const hIdx = this.data.hoursPickerValue[0]
+    const mIdx = this.data.hoursPickerValue[1]
     const h = hIdx
     const m = [0, 15, 30, 45][mIdx] || 0
     const total = Math.round((h + m / 60) * 10) / 10
@@ -436,7 +437,8 @@ Page({
   cancelCustomHours() { this.setData({ showCustomHoursModal: false }) },
 
   handleHoursPickerChange(e) {
-    const [hIdx, mIdx] = e.detail.value
+    const hIdx = e.detail.value[0]
+    const mIdx = e.detail.value[1]
     const h = hIdx
     const m = [0, 15, 30, 45][mIdx] || 0
     this.setData({ hoursPickerValue: [hIdx, mIdx], customHoursVal: String(h), customMinsVal: String(m) })
