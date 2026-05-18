@@ -275,11 +275,34 @@ exports.main = async (event, context) => {
     const fragmentIds = aiResult.fragment_plan || []
     const busySlots = aiResult.busy_slots || []
 
+    // 构建主任务数据：先按ID匹配，ID匹配不到时按标题匹配（防AI幻觉）
     const mainTasksData = (aiResult.main_plan || []).map(p => {
-      const task = tasks.find(t => t._id === p.task_id)
+      let task = tasks.find(t => t._id === p.task_id)
+      // fallback：按标题匹配（AI有时会幻觉出错误ID）
+      if (!task) task = tasks.find(t => t.title === p.task_id || t.title === (p.task_title || ''))
       if (!task) return null
-      return { ...task, suggested_minutes: p.suggested_minutes, suggested_start_time: p.suggested_start_time || null, suggested_end_time: p.suggested_end_time || null, ai_note: p.note }
+      return { user_id: task.user_id, _id: task._id, title: task.title, description: task.description, deadline: task.deadline,
+               estimated_minutes: task.estimated_minutes, importance: task.importance, quadrant: task.quadrant,
+               is_fragment: task.is_fragment, status: task.status, fail_count: task.fail_count || 0,
+               suggested_minutes: p.suggested_minutes || task.estimated_minutes,
+               suggested_start_time: p.suggested_start_time || null,
+               suggested_end_time: p.suggested_end_time || null,
+               ai_note: p.note || '' }
     }).filter(Boolean)
+
+    // 保底：如果AI一个任务都没排上（完全幻觉），直接用原始任务顺序
+    if (mainTasksData.length === 0 && regularTasks.length > 0) {
+      const fallback = regularTasks.slice(0, Math.min(5, regularTasks.length))
+      const minutesEach = Math.max(15, Math.floor((availableHours * 60 * 0.8) / fallback.length))
+      fallback.forEach(t => {
+        mainTasksData.push({ user_id: t.user_id, _id: t._id, title: t.title, description: t.description,
+                             deadline: t.deadline, estimated_minutes: t.estimated_minutes,
+                             importance: t.importance, quadrant: t.quadrant, is_fragment: t.is_fragment,
+                             status: t.status, fail_count: t.fail_count || 0,
+                             suggested_minutes: Math.min(minutesEach, t.estimated_minutes),
+                             suggested_start_time: null, suggested_end_time: null, ai_note: '（自动安排）' })
+      })
+    }
 
     const fragmentTasksData = fragmentIds.map(id => tasks.find(t => t._id === id)).filter(Boolean)
 
