@@ -51,7 +51,9 @@ Page({
       for (let i = 6; i >= 0; i--) {
         const d = new Date(today)
         d.setDate(d.getDate() - i)
-        const dateStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+        const pm = d.getMonth() + 1
+        const pd = d.getDate()
+        const dateStr = d.getFullYear() + '-' + (pm < 10 ? '0' : '') + pm + '-' + (pd < 10 ? '0' : '') + pd
         const log = logs.find(l => l.date === dateStr)
         const rate = log
           ? (log.planned > 0 ? Math.min(100, Math.round((log.completed / log.planned) * 100)) : (log.isRestDay ? 100 : 0))

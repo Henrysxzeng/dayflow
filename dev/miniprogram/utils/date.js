@@ -2,7 +2,9 @@ const WEEK_DAYS = ['周日', '周一', '周二', '周三', '周四', '周五', '
 
 const todayString = () => {
   const d = new Date()
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  const m = d.getMonth() + 1
+  const day = d.getDate()
+  return d.getFullYear() + '-' + (m < 10 ? '0' : '') + m + '-' + (day < 10 ? '0' : '') + day
 }
 
 const formatDateDisplay = (date = new Date()) => {

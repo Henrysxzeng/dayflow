@@ -11,7 +11,7 @@ const calcEndTime = (startTime, minutes) => {
   const total = h * 60 + m + minutes
   const eh = Math.floor(total / 60) % 24
   const em = total % 60
-  return `${String(eh).padStart(2, '0')}:${String(em).padStart(2, '0')}`
+  return (eh < 10 ? '0' : '') + eh + ':' + (em < 10 ? '0' : '') + em
 }
 
 Page({
@@ -340,7 +340,9 @@ Page({
 
         // 判断是否紧急（今日截止或重要程度高）
         const today = new Date()
-        const todayStr = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0')
+        const tm = today.getMonth() + 1
+        const td = today.getDate()
+        const todayStr = today.getFullYear() + '-' + (tm < 10 ? '0' : '') + tm + '-' + (td < 10 ? '0' : '') + td
         const isUrgentToday = (deadline && deadline.startsWith(todayStr)) || form.importance >= 3
 
         if (isUrgentToday && newTaskId) {

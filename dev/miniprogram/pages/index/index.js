@@ -927,7 +927,7 @@ Page({
       const progress = Math.min(1, elapsed / totalSeconds)
       this.setData({
         pomodoroSeconds: remaining,
-        pomodoroDisplay: `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`,
+        pomodoroDisplay: (minutes < 10 ? '0' : '') + minutes + ':' + (seconds < 10 ? '0' : '') + seconds,
         pomodoroProgress: progress
       })
       if (remaining <= 0) {
