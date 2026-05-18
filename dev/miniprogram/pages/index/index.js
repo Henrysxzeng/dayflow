@@ -139,13 +139,16 @@ Page({
     const newTask = getApp().globalData.newTaskForToday
     if (newTask) {
       getApp().globalData.newTaskForToday = null
-      if (this.data.planReady) {
-        // 计划已加载，直接弹（500ms延迟确保页面过渡完成，hideToast会先清掉"已添加"提示）
-        const task = newTask
-        setTimeout(() => this._showNewTaskModal(task), 500)
-      } else {
-        this.setData({ pendingNewTaskNotice: newTask })
-      }
+      // 强制刷新：不管当前planReady状态，直接重新加载页面并带着新任务通知
+      this.setData({
+        pendingNewTaskNotice: newTask,
+        showRestDay: false,
+        showOnboarding: false,
+        waitingForSchedule: false
+      })
+      wx.showLoading({ title: '加载中...', mask: false })
+      this.initPage()
+      return  // 跳过下面的planReady检查，避免重复调用initPage
     }
 
     // 处理从任务列表跳转的番茄钟请求

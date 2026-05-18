@@ -351,8 +351,8 @@ Page({
           }
         }
 
-        wx.showToast({ title: '已添加', icon: 'success', duration: 400 })
-        setTimeout(function() { wx.navigateBack() }, 500)
+        // globalData已设置，直接跳转（不用toast等待，避免与今日页面的modal冲突）
+        wx.navigateBack()
       }
     } catch (e) {
       wx.hideLoading()

@@ -95,10 +95,16 @@ const buildUserPrompt = (tasks, availableHours, date, tone, scheduleConstraints,
 
   const regularTasks = tasks.filter(t => !t.locked_start_time)
 
+  // 今日截止的任务，必须全部出现在计划中
+  const mustDoToday = regularTasks.filter(t => t.deadline && t.deadline.startsWith(date))
+  const mustDoSection = mustDoToday.length > 0
+    ? `\n⚠️ 以下任务今天截止，必须全部出现在 main_plan 中，不能跳过：\n${mustDoToday.map(t => `• "${t.title}"（${t.estimated_minutes}分钟）`).join('\n')}\n如果这些任务加起来超过可用时间，请仍全部安排，并在 summary 中用一句话给出优先级建议（例如"时间紧，先搞定X，Y可以申请延期"），不要因为时间不够而省略今日截止任务。\n`
+    : ''
+
   return `今天日期：${date}
 今日可用时间：${availableHours} 小时
 AI风格：${toneDesc}
-${habitsSection}${freshStartSection}${completionRateSection}${calibrationSection}${lockedSection}${constraintSection}
+${habitsSection}${freshStartSection}${completionRateSection}${calibrationSection}${lockedSection}${mustDoSection}${constraintSection}
 待排任务（固定时间任务已单独列出，以下是需要AI安排的任务）：
 ${JSON.stringify(regularTasks.map(t => ({
     id: t._id,
