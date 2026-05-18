@@ -130,6 +130,23 @@ Page({
     if (this.data.showPomodoro && this.data.pomodoroStartTime > 0) {
       this._startPomodoroTick()
     }
+    // 处理新建任务后的今日新任务提示
+    const newTask = getApp().globalData.newTaskForToday
+    if (newTask && this.data.planReady) {
+      getApp().globalData.newTaskForToday = null
+      wx.showModal({
+        title: `新任务已添加`,
+        content: `"${newTask.title}"要加入今日计划吗？`,
+        confirmText: 'AI重新规划',
+        cancelText: '暂不改动',
+        success: res => {
+          if (res.confirm) this.generatePlan(this.data.availableHours, this.data.scheduleConstraints)
+        }
+      })
+      return
+    }
+    if (newTask) getApp().globalData.newTaskForToday = null
+
     // 处理从任务列表跳转的番茄钟请求
     const pending = getApp().globalData.pendingPomodoro
     if (pending) {
@@ -390,17 +407,8 @@ Page({
   },
 
   handleRegenerate() {
-    wx.showActionSheet({
-      itemList: ['自定义', '0.5h', '1h', '1.5h', '2h', '2.5h', '3h', '4h', '5h', '6h'],
-      success: res => {
-        if (res.tapIndex === 0) {
-          this.setData({ showCustomHoursModal: true, customHoursVal: '3', customMinsVal: '0' })
-          return
-        }
-        const hours = [0.5, 1, 1.5, 2, 2.5, 3, 4, 5, 6][res.tapIndex - 1]
-        this.setData({ planReady: false, selectedHoursTemp: hours, selectedHours: hours, waitingForSchedule: true, scheduleInput: this.data.scheduleConstraints })
-      }
-    })
+    // 用自定义弹窗代替actionSheet（actionSheet超过6项在部分设备失效）
+    this.setData({ showCustomHoursModal: true, customHoursVal: String(this.data.availableHours || 3), customMinsVal: '0' })
   },
 
   handleCustomHoursValInput(e) { this.setData({ customHoursVal: e.detail.value }) },
@@ -408,11 +416,28 @@ Page({
   confirmCustomHours() {
     const h = parseFloat(this.data.customHoursVal) || 0
     const m = parseInt(this.data.customMinsVal) || 0
-    const total = h + m / 60
+    const total = Math.round((h + m / 60) * 10) / 10
     if (total <= 0) { wx.showToast({ title: '请输入有效时长', icon: 'none' }); return }
-    this.setData({ showCustomHoursModal: false, planReady: false, selectedHoursTemp: total, selectedHours: total, waitingForSchedule: true, scheduleInput: this.data.scheduleConstraints })
+    this.setData({ showCustomHoursModal: false })
+    if (this.data.planReady) {
+      // 已有计划时修改时长：直接重新生成，保留现有时间约束
+      this.generatePlan(total, this.data.scheduleConstraints)
+    } else {
+      // 初次选时长：进入时间约束输入步骤
+      this.setData({ planReady: false, selectedHoursTemp: total, selectedHours: total, waitingForSchedule: true, scheduleInput: '' })
+    }
   },
   cancelCustomHours() { this.setData({ showCustomHoursModal: false }) },
+
+  quickSelectHours(e) {
+    const h = parseFloat(e.currentTarget.dataset.h)
+    this.setData({ showCustomHoursModal: false })
+    if (this.data.planReady) {
+      this.generatePlan(h, this.data.scheduleConstraints)
+    } else {
+      this.setData({ planReady: false, selectedHoursTemp: h, selectedHours: h, waitingForSchedule: true, scheduleInput: '' })
+    }
+  },
 
   handleRegenerateSame() {
     this.generatePlan(this.data.availableHours || 4, this.data.scheduleConstraints)

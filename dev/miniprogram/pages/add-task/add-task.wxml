@@ -1,18 +1,15 @@
-<view style="padding:32rpx 32rpx 160rpx;">
+﻿<view style="padding:32rpx 32rpx 160rpx;">
 
-  <!-- 快速模板按钮 -->
   <view bindtap="openTemplates" style="background:#EFF6FF; border-radius:16rpx; padding:20rpx 28rpx; margin-bottom:32rpx; display:flex; align-items:center; justify-content:space-between;">
     <text style="font-size:28rpx; color:#2563EB;">📋 从模板快速添加</text>
     <text style="color:#2563EB;">›</text>
   </view>
 
-  <!-- 任务名称 -->
   <view style="margin-bottom:40rpx;">
     <view style="font-size:26rpx; color:#6B7280; margin-bottom:12rpx;">任务名称</view>
     <input class="card" style="height:80rpx; padding:0 28rpx; font-size:32rpx; color:#111827;" placeholder="例：完成季度报告" placeholder-style="color:#D1D5DB;" bindinput="handleTitleInput" value="{{form.title}}" />
   </view>
 
-  <!-- 截止日期 -->
   <view style="margin-bottom:40rpx;">
     <view style="font-size:26rpx; color:#6B7280; margin-bottom:12rpx;">截止日期</view>
     <picker mode="date" bindchange="handleDeadlineChange" value="{{form.deadlineDate}}">
@@ -24,29 +21,29 @@
     <picker wx:if="{{form.deadlineDate}}" mode="time" start="00:00" end="23:59" bindchange="handleDeadlineTimeChange" value="{{form.deadlineTime || '09:00'}}">
       <view class="card row-between" style="padding:20rpx 28rpx;">
         <view>
-          <text style="font-size:22rpx; color:#9CA3AF; display:block; margin-bottom:4rpx;">截止时间（几点几分）</text>
-          <text style="font-size:28rpx; color:{{form.deadlineTime ? '#111827' : '#D1D5DB'}};">{{form.deadlineTime || '点击选择，可不填'}}</text>
+          <text style="font-size:22rpx; color:#9CA3AF; display:block; margin-bottom:4rpx;">截止时间（精确到几点）</text>
+          <text style="font-size:28rpx; color:{{form.deadlineTime ? '#111827' : '#D1D5DB'}};">{{form.deadlineTime || '可不填'}}</text>
         </view>
         <text style="color:#2563EB; font-size:24rpx;">选择 ›</text>
       </view>
     </picker>
   </view>
 
-  <!-- 截止提醒（有截止日期才显示）-->
   <view wx:if="{{form.deadlineDate}}" style="margin-bottom:40rpx;">
     <view style="font-size:26rpx; color:#6B7280; margin-bottom:12rpx;">截止前提醒</view>
-    <scroll-view scroll-x style="white-space:nowrap;">
-      <view wx:for="{{[{label:'不提醒',v:0},{label:'15分前',v:15},{label:'30分前',v:30},{label:'1小时前',v:60},{label:'2小时前',v:120},{label:'1天前',v:1440}]}}" wx:key="v"
-        class="chip {{form.reminderMinutesBefore === item.v ? 'active' : ''}}"
-        style="display:inline-flex;"
-        bindtap="handleReminderChange"
-        data-minutes="{{item.v}}"
+    <scroll-view scroll-x style="white-space:nowrap; margin-bottom:12rpx;">
+      <view wx:for="{{[{label:'不提醒',v:0},{label:'15分前',v:15},{label:'30分前',v:30},{label:'1小时前',v:60},{label:'2小时前',v:120},{label:'1天前',v:1440},{label:'自定义',v:-1}]}}" wx:key="v"
+        class="chip {{(form.reminderMinutesBefore === item.v && !form.showCustomReminder) || (item.v === -1 && form.showCustomReminder) ? 'active' : ''}}"
+        style="display:inline-flex;" bindtap="handleReminderSelect" data-v="{{item.v}}"
       >{{item.label}}</view>
     </scroll-view>
-    <text wx:if="{{form.reminderMinutesBefore > 0}}" style="font-size:22rpx; color:#6B7280; display:block; margin-top:8rpx;">⚡ 通过订阅消息提醒（需在完成今日任务时授权）</text>
+    <view wx:if="{{form.showCustomReminder}}" style="background:#F9FAFB; border-radius:14rpx; padding:16rpx 24rpx; display:flex; align-items:center;">
+      <input type="number" placeholder="输入分钟数" bindinput="handleCustomReminderInput" style="flex:1; height:64rpx; font-size:28rpx; color:#111827;" />
+      <text style="color:#6B7280; font-size:26rpx; margin-left:12rpx;">分钟前</text>
+    </view>
+    <text wx:if="{{form.reminderMinutesBefore > 0}}" style="font-size:22rpx; color:#6B7280; display:block; margin-top:8rpx;">⚡ 通过订阅消息提醒</text>
   </view>
 
-  <!-- 预计用时 -->
   <view style="margin-bottom:40rpx;">
     <view class="row-between" style="margin-bottom:12rpx;">
       <text style="font-size:26rpx; color:#6B7280;">预计用时</text>
@@ -54,27 +51,23 @@
     </view>
     <scroll-view scroll-x style="white-space:nowrap; margin-bottom:16rpx;">
       <view wx:for="{{durationOptions}}" wx:key="value"
-        class="chip {{(!showCustomDuration && form.estimatedMinutes === item.value) || (showCustomDuration && item.value === -1) ? 'active' : ''}}"
-        style="display:inline-flex;"
-        bindtap="handleDurationSelect"
-        data-value="{{item.value}}"
-      >{{item.label}}</view>
+        class="chip {{!showDurationPicker && form.estimatedMinutes === item.value ? 'active' : (showDurationPicker && item.value === -1 ? 'active' : '')}}"
+        style="display:inline-flex;" bindtap="handleDurationSelect" data-value="{{item.value}}"
+      >{{item.value === -1 ? durationLabel : item.label}}</view>
     </scroll-view>
-    <!-- 自定义：小时+分钟输入 -->
-    <view wx:if="{{showCustomDuration}}" style="background:#F9FAFB; border-radius:16rpx; padding:20rpx 24rpx;">
-      <view class="row" style="align-items:center; justify-content:center; gap:16rpx;">
-        <input type="number" placeholder="0" bindinput="handleCustomHoursInput" value="{{customHours}}"
-          style="width:100rpx; height:72rpx; background:#FFF; border-radius:12rpx; text-align:center; font-size:32rpx; color:#111827; font-weight:700;" />
-        <text style="font-size:28rpx; color:#374151;">小时</text>
-        <input type="number" placeholder="30" bindinput="handleCustomMinutesInput" value="{{customMinutes}}"
-          style="width:100rpx; height:72rpx; background:#FFF; border-radius:12rpx; text-align:center; font-size:32rpx; color:#111827; font-weight:700;" />
-        <text style="font-size:28rpx; color:#374151;">分钟</text>
+    <view wx:if="{{showDurationPicker}}" class="card" style="padding:16rpx 24rpx;">
+      <picker mode="multiSelector" range="{{durationPickerRange}}" value="{{durationPickerValue}}" bindchange="handleDurationPickerChange" style="width:100%;">
+        <view class="row" style="justify-content:center; align-items:center; padding:16rpx 0;">
+          <text style="font-size:36rpx; font-weight:700; color:#2563EB;">{{durationLabel}}</text>
+          <text style="font-size:24rpx; color:#9CA3AF; margin-left:16rpx;">上下滑动选择 ›</text>
+        </view>
+      </picker>
+      <view bindtap="cancelDurationPicker" style="text-align:center; padding:12rpx 0;">
+        <text style="font-size:26rpx; color:#6B7280;">收起</text>
       </view>
-      <text wx:if="{{form.estimatedMinutes > 0}}" style="font-size:22rpx; color:#6B7280; display:block; text-align:center; margin-top:10rpx;">共 {{form.estimatedMinutes}} 分钟</text>
     </view>
   </view>
 
-  <!-- 重要程度 -->
   <view style="margin-bottom:40rpx;">
     <view style="font-size:26rpx; color:#6B7280; margin-bottom:12rpx;">重要程度</view>
     <view class="row">
@@ -82,22 +75,18 @@
     </view>
   </view>
 
-  <!-- 时间安排方式 (#10) -->
   <view style="margin-bottom:40rpx;">
     <view style="font-size:26rpx; color:#6B7280; margin-bottom:12rpx;">时间安排</view>
     <view class="row" style="background:#F9FAFB; border-radius:16rpx; padding:8rpx; margin-bottom:16rpx;">
-      <view bindtap="switchSchedulingMode" data-mode="ai"
-        style="flex:1; text-align:center; padding:16rpx 0; border-radius:12rpx; background:{{form.schedulingMode === 'ai' ? '#2563EB' : 'transparent'}};">
+      <view bindtap="switchSchedulingMode" data-mode="ai" style="flex:1; text-align:center; padding:16rpx 0; border-radius:12rpx; background:{{form.schedulingMode === 'ai' ? '#2563EB' : 'transparent'}};">
         <text style="font-size:26rpx; color:{{form.schedulingMode === 'ai' ? '#FFF' : '#6B7280'}}; font-weight:{{form.schedulingMode === 'ai' ? '600' : '400'}};">🤖 AI 帮我安排</text>
       </view>
-      <view bindtap="switchSchedulingMode" data-mode="manual"
-        style="flex:1; text-align:center; padding:16rpx 0; border-radius:12rpx; background:{{form.schedulingMode === 'manual' ? '#2563EB' : 'transparent'}};">
+      <view bindtap="switchSchedulingMode" data-mode="manual" style="flex:1; text-align:center; padding:16rpx 0; border-radius:12rpx; background:{{form.schedulingMode === 'manual' ? '#2563EB' : 'transparent'}};">
         <text style="font-size:26rpx; color:{{form.schedulingMode === 'manual' ? '#FFF' : '#6B7280'}}; font-weight:{{form.schedulingMode === 'manual' ? '600' : '400'}};">🔒 我来定时间</text>
       </view>
     </view>
-    <!-- AI模式：可设置倾向时间（非强制） -->
     <view wx:if="{{form.schedulingMode === 'ai'}}">
-      <text style="font-size:22rpx; color:#9CA3AF; display:block; margin-bottom:12rpx;">可选：希望在什么时间做（AI会尽量参考）</text>
+      <text style="font-size:22rpx; color:#9CA3AF; display:block; margin-bottom:12rpx;">可选：希望在什么时间做（AI尽量参考）</text>
       <picker mode="time" start="06:00" end="23:00" bindchange="handlePreferredTimeChange" value="{{form.preferredTime || '09:00'}}">
         <view style="background:#F9FAFB; border-radius:14rpx; padding:18rpx 24rpx; display:flex; align-items:center; justify-content:space-between;">
           <text style="font-size:28rpx; color:{{form.preferredTime ? '#111827' : '#D1D5DB'}};">{{form.preferredTime || '不指定（让AI自动选）'}}</text>
@@ -105,69 +94,74 @@
         </view>
       </picker>
     </view>
-    <!-- 手动模式：设置固定时间 -->
     <view wx:if="{{form.schedulingMode === 'manual'}}">
-      <text style="font-size:22rpx; color:#DC2626; display:block; margin-bottom:12rpx;">⚠️ 固定后AI重新生成计划时不会移动此任务</text>
+      <text style="font-size:22rpx; color:#DC2626; display:block; margin-bottom:12rpx;">⚠️ 固定后AI重新生成不会移动此任务</text>
       <picker mode="time" start="06:00" end="23:00" bindchange="handleLockedTimeChange" value="{{form.lockedStartTime || '09:00'}}">
-        <view style="background:#FEF3C7; border-radius:14rpx; padding:18rpx 24rpx; display:flex; align-items:center; justify-content:space-between; border:2rpx solid #FDE68A;">
-          <text style="font-size:30rpx; color:{{form.lockedStartTime ? '#92400E' : '#D97706'}}; font-weight:600;">🔒 {{form.lockedStartTime || '点击设置固定开始时间'}}</text>
-          <text style="color:#D97706; font-size:24rpx;">选择 ›</text>
+        <view style="background:#FEF3C7; border-radius:14rpx; padding:18rpx 24rpx; border:2rpx solid #FDE68A;">
+          <view class="row-between">
+            <text style="font-size:28rpx; color:{{form.lockedStartTime ? '#92400E' : '#D97706'}}; font-weight:600;">🔒 开始：{{form.lockedStartTime || '点击设置'}}</text>
+            <text style="color:#D97706; font-size:24rpx;">选择 ›</text>
+          </view>
+          <view wx:if="{{form.lockedStartTime}}" style="margin-top:8rpx;">
+            <text style="font-size:24rpx; color:#92400E;">结束：{{form.lockedEndTime}}（共{{form.estimatedMinutes}}分钟）</text>
+          </view>
         </view>
       </picker>
     </view>
   </view>
 
-  <!-- 备注 -->
   <view style="margin-bottom:48rpx;">
     <view style="font-size:26rpx; color:#6B7280; margin-bottom:12rpx;">备注（选填）</view>
     <textarea class="card" style="padding:24rpx 28rpx; font-size:28rpx; color:#374151; width:100%; min-height:120rpx; box-sizing:border-box;" placeholder="补充说明..." placeholder-style="color:#D1D5DB;" bindinput="handleDescInput" value="{{form.description}}" />
   </view>
 
-  <!-- 邀请好友 -->
-  <view wx:if="{{!isEditMode}}" style="margin-bottom:40rpx;">
-    <view class="row-between" style="margin-bottom:16rpx;" bindtap="toggleInviteFriend">
-      <text style="font-size:28rpx; color:#374151;">🤝 邀请好友一起完成</text>
-      <view style="width:80rpx; height:44rpx; border-radius:22rpx; background:{{inviteFriend ? '#2563EB' : '#E5E7EB'}}; display:flex; align-items:center; justify-content:{{inviteFriend ? 'flex-end' : 'flex-start'}}; padding:0 4rpx;">
-        <view style="width:36rpx; height:36rpx; border-radius:18rpx; background:#FFF;"></view>
-      </view>
-    </view>
-    <view wx:if="{{inviteFriend}}">
-      <view wx:if="{{friends.length === 0}}" style="text-align:center; padding:20rpx 0; color:#9CA3AF; font-size:26rpx;">先去"好友"Tab添加好友</view>
-      <view wx:for="{{friends}}" wx:key="user_id" bindtap="selectFriend" data-id="{{item.user_id}}" data-name="{{item.display_name}}"
-        style="padding:18rpx 24rpx; border-radius:16rpx; margin-bottom:12rpx; background:{{selectedFriendId === item.user_id ? '#EFF6FF' : '#F9FAFB'}}; border:2rpx solid {{selectedFriendId === item.user_id ? '#2563EB' : 'transparent'}}; display:flex; align-items:center;">
-        <text style="font-size:36rpx; margin-right:16rpx;">{{item.avatar_emoji}}</text>
-        <view class="flex-1">
-          <text style="font-size:28rpx; color:#111827; font-weight:{{selectedFriendId === item.user_id ? '600' : '400'}};">{{item.display_name}}</text>
-        </view>
-        <text wx:if="{{selectedFriendId === item.user_id}}" style="color:#2563EB; font-size:28rpx;">✓</text>
-      </view>
-    </view>
-  </view>
-
-  <!-- 提交 -->
   <view class="btn-primary" bindtap="handleSubmit" style="{{!form.title ? 'opacity:0.4;' : ''}}">
-    {{isEditMode ? '保存修改' : (inviteFriend && selectedFriendId ? '添加并邀请好友' : '添加任务')}}
+    {{isEditMode ? '保存修改' : '添加任务'}}
   </view>
 
 </view>
 
-<!-- 模板选择浮层 -->
 <view wx:if="{{showTemplates}}" style="position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:999;" bindtap="closeTemplates">
-  <view style="position:absolute; bottom:0; left:0; right:0; background:#FFF; border-radius:32rpx 32rpx 0 0; padding:32rpx 0 80rpx;" catchtap="">
-    <view class="row-between" style="padding:0 32rpx 24rpx;">
+  <view style="position:absolute; bottom:0; left:0; right:0; background:#FFF; border-radius:32rpx 32rpx 0 0; padding:32rpx 0 80rpx;" catchtap="noop">
+    <view class="row-between" style="padding:0 32rpx 20rpx;">
       <text style="font-size:32rpx; font-weight:700; color:#111827;">选择模板</text>
       <text bindtap="closeTemplates" style="font-size:28rpx; color:#6B7280;">关闭</text>
     </view>
-    <scroll-view scroll-x style="white-space:nowrap; padding:0 32rpx; margin-bottom:24rpx;">
+    <scroll-view scroll-x style="white-space:nowrap; padding:0 32rpx; margin-bottom:16rpx;">
       <view wx:for="{{templateCategories}}" wx:key="name" bindtap="switchTemplateCategory" data-index="{{index}}"
-        style="display:inline-block; padding:12rpx 28rpx; border-radius:40rpx; margin-right:16rpx; background:{{activeTemplateCategory === index ? '#2563EB' : '#F3F4F6'}}; font-size:26rpx; color:{{activeTemplateCategory === index ? '#FFF' : '#374151'}};">{{item.name}}</view>
+        style="display:inline-block; padding:12rpx 28rpx; border-radius:40rpx; margin-right:12rpx; background:{{activeTemplateCategory === index ? '#2563EB' : '#F3F4F6'}}; font-size:26rpx; color:{{activeTemplateCategory === index ? '#FFF' : '#374151'}};">{{item.name}}</view>
+      <view bindtap="switchTemplateCategory" data-index="{{templateCategories.length}}"
+        style="display:inline-block; padding:12rpx 28rpx; border-radius:40rpx; background:{{activeTemplateCategory === templateCategories.length ? '#2563EB' : '#F3F4F6'}}; font-size:26rpx; color:{{activeTemplateCategory === templateCategories.length ? '#FFF' : '#374151'}};">⭐ 我的</view>
     </scroll-view>
-    <view style="padding:0 32rpx; max-height:500rpx; overflow:hidden;">
+    <scroll-view scroll-y style="max-height:500rpx; padding:0 32rpx;" wx:if="{{activeTemplateCategory < templateCategories.length}}">
       <view wx:for="{{templateCategories[activeTemplateCategory].templates}}" wx:key="title" bindtap="applyTemplate" data-title="{{item.title}}" data-minutes="{{item.minutes}}"
         style="padding:24rpx 0; border-bottom:1rpx solid #F3F4F6; display:flex; align-items:center; justify-content:space-between;">
         <text style="font-size:30rpx; color:#111827;">{{item.title}}</text>
-        <text style="font-size:24rpx; color:#6B7280;">{{item.minutes < 60 ? item.minutes + '分钟' : (item.minutes/60) + '小时'}}</text>
+        <text style="font-size:24rpx; color:#6B7280;">{{item.minutes < 60 ? item.minutes + '分' : (item.minutes/60) + 'h'}}</text>
       </view>
-    </view>
+    </scroll-view>
+    <scroll-view scroll-y style="max-height:500rpx; padding:0 32rpx;" wx:if="{{activeTemplateCategory === templateCategories.length}}">
+      <view wx:if="{{customTemplates.length === 0 && !showAddCustomTemplate}}" style="text-align:center; padding:48rpx 0; color:#9CA3AF; font-size:26rpx;">还没有自定义模板</view>
+      <view wx:for="{{customTemplates}}" wx:key="id" style="padding:20rpx 0; border-bottom:1rpx solid #F3F4F6; display:flex; align-items:center;">
+        <view bindtap="applyTemplate" data-title="{{item.title}}" data-minutes="{{item.minutes}}" style="flex:1; display:flex; align-items:center; justify-content:space-between;">
+          <text style="font-size:28rpx; color:#111827;">{{item.title}}</text>
+          <text style="font-size:24rpx; color:#6B7280; margin-right:16rpx;">{{item.minutes}}分</text>
+        </view>
+        <view bindtap="deleteCustomTemplate" data-id="{{item.id}}" style="padding:8rpx 14rpx; background:#FEE2E2; border-radius:10rpx;">
+          <text style="font-size:24rpx; color:#EF4444;">删除</text>
+        </view>
+      </view>
+      <view wx:if="{{!showAddCustomTemplate}}" bindtap="openAddCustomTemplate" style="margin-top:20rpx; padding:20rpx; border:2rpx dashed #D1D5DB; border-radius:16rpx; text-align:center;">
+        <text style="font-size:26rpx; color:#2563EB;">+ 添加自定义模板</text>
+      </view>
+      <view wx:else style="margin-top:20rpx; background:#F9FAFB; border-radius:16rpx; padding:24rpx;">
+        <input placeholder="模板名称" bindinput="handleNewTemplateTitleInput" value="{{newTemplateTitle}}" style="height:72rpx; background:#FFF; border-radius:12rpx; padding:0 16rpx; font-size:28rpx; color:#111827; margin-bottom:16rpx; width:100%; box-sizing:border-box;" />
+        <view class="row" style="align-items:center; margin-bottom:16rpx; gap:12rpx;">
+          <input type="number" placeholder="分钟数" bindinput="handleNewTemplateMinutesInput" value="{{newTemplateMinutes}}" style="flex:1; height:72rpx; background:#FFF; border-radius:12rpx; padding:0 16rpx; font-size:28rpx; color:#111827;" />
+          <text style="font-size:26rpx; color:#6B7280;">分钟</text>
+        </view>
+        <view class="btn-primary" style="height:80rpx; font-size:26rpx;" bindtap="saveCustomTemplate">保存模板</view>
+      </view>
+    </scroll-view>
   </view>
 </view>

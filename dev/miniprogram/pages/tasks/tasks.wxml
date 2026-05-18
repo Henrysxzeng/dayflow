@@ -88,6 +88,7 @@
         </view>
         <view bindtap="handleDeleteTask" data-id="{{item._id}}" style="padding:8rpx 12rpx;">
           <text style="font-size:32rpx; color:#E5E7EB;">···</text>
+        </view>
       </view>
     </view>
   </view>

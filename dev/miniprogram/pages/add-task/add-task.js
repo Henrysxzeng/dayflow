@@ -1,5 +1,19 @@
 const { callCloud } = require('../../utils/api')
 
+// 生成小时选项 0-24
+const HOUR_RANGE = Array.from({ length: 25 }, (_, i) => `${i}小时`)
+// 生成分钟选项 0,5,10,...,55
+const MIN_RANGE = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55].map(m => `${m}分`)
+
+const calcEndTime = (startTime, minutes) => {
+  if (!startTime || !minutes) return ''
+  const [h, m] = startTime.split(':').map(Number)
+  const total = h * 60 + m + minutes
+  const eh = Math.floor(total / 60) % 24
+  const em = total % 60
+  return `${String(eh).padStart(2, '0')}:${String(em).padStart(2, '0')}`
+}
+
 Page({
   data: {
     form: {
@@ -9,12 +23,19 @@ Page({
       estimatedMinutes: 30,
       importance: 3,
       description: '',
-      schedulingMode: 'ai',  // 'ai' | 'manual'
-      preferredTime: '',     // HH:MM，手动安排时设置
-      lockedStartTime: '',   // HH:MM，固定时间段
-      reminderMinutesBefore: 0  // 截止前多少分钟提醒（0=不提醒）
+      schedulingMode: 'ai',
+      preferredTime: '',
+      lockedStartTime: '',
+      lockedEndTime: '',   // 根据开始时间+用时自动计算
+      reminderMinutesBefore: 0,
+      customReminderMinutes: 0,
+      showCustomReminder: false
     },
-    // 预计用时（自定义放最前面）
+    // 时长picker
+    durationPickerRange: [HOUR_RANGE, MIN_RANGE],
+    durationPickerValue: [0, 6],   // 默认0小时30分
+    showDurationPicker: false,
+    durationLabel: '30分',
     durationOptions: [
       { label: '自定义', value: -1 },
       { label: '5分', value: 5 },
@@ -31,17 +52,10 @@ Page({
       { label: '高', value: 3 },
       { label: '非常高', value: 4 }
     ],
-    showCustomDuration: false,
-    customHours: '0',
-    customMinutes: '30',
     isEditMode: false,
     editTaskId: null,
     showTemplates: false,
-    // 好友邀请
-    inviteFriend: false,
-    friends: [],
-    selectedFriendId: null,
-    selectedFriendName: '',
+    activeTemplateCategory: 0,
     templateCategories: [
       {
         name: '📚 学习', templates: [
@@ -72,84 +86,178 @@ Page({
         ]
       }
     ],
-    activeTemplateCategory: 0
+    customTemplates: [],   // 用户自定义模板
+    showAddCustomTemplate: false,
+    newTemplateTitle: '',
+    newTemplateMinutes: 30,
+    inviteFriend: false,
+    friends: [],
+    selectedFriendId: null,
+    selectedFriendName: ''
   },
 
   onLoad(options) {
+    this.loadCustomTemplates()
     if (options && options.taskId) {
       this.setData({ isEditMode: true, editTaskId: options.taskId })
-      const { callCloud } = require('../../utils/api')
       callCloud('getTasks').then(res => {
         const task = (res.tasks || []).find(t => t._id === options.taskId)
         if (!task) return
         const dateStr = task.deadline ? task.deadline.split(' ')[0] : ''
         const timeStr = task.deadline && task.deadline.includes(' ') ? task.deadline.split(' ')[1] : ''
+        const mins = task.estimated_minutes || 30
+        const h = Math.floor(mins / 60)
+        const m = mins % 60
+        const mIdx = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55].indexOf(m)
         this.setData({
           'form.title': task.title,
           'form.deadlineDate': dateStr,
           'form.deadlineTime': timeStr,
-          'form.estimatedMinutes': task.estimated_minutes || 30,
+          'form.estimatedMinutes': mins,
           'form.importance': task.importance || 2,
           'form.description': task.description || '',
           'form.schedulingMode': task.locked_start_time ? 'manual' : 'ai',
           'form.lockedStartTime': task.locked_start_time || '',
-          'form.reminderMinutesBefore': task.reminder_minutes_before || 0
+          'form.lockedEndTime': task.locked_start_time ? calcEndTime(task.locked_start_time, mins) : '',
+          'form.reminderMinutesBefore': task.reminder_minutes_before || 0,
+          durationPickerValue: [h, Math.max(0, mIdx)],
+          durationLabel: h > 0 ? `${h}小时${m > 0 ? m + '分' : ''}` : `${m}分`
         })
       }).catch(() => {})
     }
   },
 
+  loadCustomTemplates() {
+    try {
+      const stored = wx.getStorageSync('custom_templates') || []
+      this.setData({ customTemplates: stored })
+    } catch (e) { }
+  },
+
+  // ── 时长选择 ──
+  handleDurationSelect(e) {
+    const value = e.currentTarget.dataset.value
+    if (value === -1) {
+      this.setData({ showDurationPicker: true })
+    } else {
+      const h = Math.floor(value / 60)
+      const m = value % 60
+      const mIdx = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55].indexOf(m)
+      this.setData({
+        'form.estimatedMinutes': value,
+        showDurationPicker: false,
+        durationPickerValue: [h, Math.max(0, mIdx)],
+        durationLabel: h > 0 ? `${h}小时${m > 0 ? m + '分' : ''}` : `${m}分`,
+        'form.lockedEndTime': calcEndTime(this.data.form.lockedStartTime, value)
+      })
+    }
+  },
+
+  handleDurationPickerChange(e) {
+    const [hIdx, mIdx] = e.detail.value
+    const h = hIdx
+    const m = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55][mIdx] || 0
+    const total = h * 60 + m
+    const label = h > 0 ? `${h}小时${m > 0 ? m + '分' : ''}` : `${m}分`
+    this.setData({
+      'form.estimatedMinutes': total || 5,
+      durationPickerValue: [hIdx, mIdx],
+      durationLabel: label,
+      showDurationPicker: false,
+      'form.lockedEndTime': calcEndTime(this.data.form.lockedStartTime, total || 5)
+    })
+  },
+
+  cancelDurationPicker() { this.setData({ showDurationPicker: false }) },
+
+  // ── 基础字段 ──
   handleTitleInput(e) { this.setData({ 'form.title': e.detail.value }) },
   handleDeadlineChange(e) { this.setData({ 'form.deadlineDate': e.detail.value }) },
   handleDeadlineTimeChange(e) { this.setData({ 'form.deadlineTime': e.detail.value }) },
   handleDescInput(e) { this.setData({ 'form.description': e.detail.value }) },
   handleImportanceSelect(e) { this.setData({ 'form.importance': e.currentTarget.dataset.value }) },
 
-  handleDurationSelect(e) {
-    const value = e.currentTarget.dataset.value
-    if (value === -1) {
-      this.setData({ showCustomDuration: true, customHours: '0', customMinutes: '30', 'form.estimatedMinutes': 30 })
-    } else {
-      this.setData({ showCustomDuration: false, 'form.estimatedMinutes': value })
-    }
-  },
-  handleCustomHoursInput(e) {
-    const h = parseInt(e.detail.value) || 0
-    const m = parseInt(this.data.customMinutes) || 0
-    this.setData({ customHours: e.detail.value, 'form.estimatedMinutes': h * 60 + m })
-  },
-  handleCustomMinutesInput(e) {
-    const h = parseInt(this.data.customHours) || 0
-    const m = parseInt(e.detail.value) || 0
-    this.setData({ customMinutes: e.detail.value, 'form.estimatedMinutes': h * 60 + m })
-  },
-
-  // 排期模式切换
+  // ── 排期模式 ──
   switchSchedulingMode(e) {
     const mode = e.currentTarget.dataset.mode
-    this.setData({ 'form.schedulingMode': mode, 'form.lockedStartTime': '' })
+    this.setData({ 'form.schedulingMode': mode, 'form.lockedStartTime': '', 'form.lockedEndTime': '' })
   },
   handleLockedTimeChange(e) {
-    this.setData({ 'form.lockedStartTime': e.detail.value })
+    const time = e.detail.value
+    this.setData({
+      'form.lockedStartTime': time,
+      'form.lockedEndTime': calcEndTime(time, this.data.form.estimatedMinutes)
+    })
   },
-  handlePreferredTimeChange(e) {
-    this.setData({ 'form.preferredTime': e.detail.value })
+  handlePreferredTimeChange(e) { this.setData({ 'form.preferredTime': e.detail.value }) },
+
+  // ── 提醒 ──
+  handleReminderSelect(e) {
+    const v = parseInt(e.currentTarget.dataset.v) || 0
+    if (v === -1) {
+      this.setData({ 'form.showCustomReminder': true, 'form.reminderMinutesBefore': 0 })
+    } else {
+      this.setData({ 'form.reminderMinutesBefore': v, 'form.showCustomReminder': false })
+    }
+  },
+  handleCustomReminderInput(e) {
+    const val = parseInt(e.detail.value) || 0
+    this.setData({ 'form.reminderMinutesBefore': val })
   },
 
-  // 提醒设置
-  handleReminderChange(e) {
-    const minutes = parseInt(e.currentTarget.dataset.minutes) || 0
-    this.setData({ 'form.reminderMinutesBefore': minutes })
-  },
+  // ── 模板 ──
+  noop() { },  // 阻止事件冒泡用
 
   openTemplates() { this.setData({ showTemplates: true }) },
-  closeTemplates() { this.setData({ showTemplates: false }) },
-  switchTemplateCategory(e) { this.setData({ activeTemplateCategory: e.currentTarget.dataset.index }) },
+  closeTemplates() { this.setData({ showTemplates: false, showAddCustomTemplate: false }) },
+  switchTemplateCategory(e) { this.setData({ activeTemplateCategory: parseInt(e.currentTarget.dataset.index) }) },
+
   applyTemplate(e) {
     const { title, minutes } = e.currentTarget.dataset
-    this.setData({ 'form.title': title, 'form.estimatedMinutes': minutes, showCustomDuration: false, showTemplates: false })
+    const h = Math.floor(minutes / 60)
+    const m = minutes % 60
+    const mIdx = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55].indexOf(m)
+    const label = h > 0 ? `${h}小时${m > 0 ? m + '分' : ''}` : `${m}分`
+    this.setData({
+      'form.title': title,
+      'form.estimatedMinutes': minutes,
+      durationPickerValue: [h, Math.max(0, mIdx)],
+      durationLabel: label,
+      showTemplates: false,
+      'form.lockedEndTime': calcEndTime(this.data.form.lockedStartTime, minutes)
+    })
   },
 
+  openAddCustomTemplate() { this.setData({ showAddCustomTemplate: true, newTemplateTitle: '', newTemplateMinutes: 30 }) },
+  handleNewTemplateTitleInput(e) { this.setData({ newTemplateTitle: e.detail.value }) },
+  handleNewTemplateMinutesInput(e) { this.setData({ newTemplateMinutes: parseInt(e.detail.value) || 30 }) },
+
+  saveCustomTemplate() {
+    const { newTemplateTitle, newTemplateMinutes, customTemplates } = this.data
+    if (!newTemplateTitle.trim()) { wx.showToast({ title: '请填写模板名称', icon: 'none' }); return }
+    const newList = [...customTemplates, { title: newTemplateTitle.trim(), minutes: newTemplateMinutes, id: Date.now() }]
+    wx.setStorageSync('custom_templates', newList)
+    this.setData({ customTemplates: newList, showAddCustomTemplate: false })
+    wx.showToast({ title: '已保存', icon: 'success' })
+  },
+
+  deleteCustomTemplate(e) {
+    const id = e.currentTarget.dataset.id
+    wx.showModal({
+      title: '删除模板',
+      content: '确认删除这个自定义模板？',
+      confirmText: '删除',
+      confirmColor: '#DC2626',
+      success: res => {
+        if (!res.confirm) return
+        const newList = this.data.customTemplates.filter(t => t.id !== id)
+        wx.setStorageSync('custom_templates', newList)
+        this.setData({ customTemplates: newList })
+      }
+    })
+  },
+
+  // ── 好友邀请 ──
   toggleInviteFriend() {
     const next = !this.data.inviteFriend
     this.setData({ inviteFriend: next, selectedFriendId: null, selectedFriendName: '' })
@@ -163,16 +271,11 @@ Page({
     this.setData({ selectedFriendId: e.currentTarget.dataset.id, selectedFriendName: e.currentTarget.dataset.name })
   },
 
+  // ── 提交 ──
   async handleSubmit() {
     const { form } = this.data
-    if (!form.title.trim()) {
-      wx.showToast({ title: '请填写任务名称', icon: 'none' })
-      return
-    }
-    if (form.estimatedMinutes <= 0) {
-      wx.showToast({ title: '请填写预计用时', icon: 'none' })
-      return
-    }
+    if (!form.title.trim()) { wx.showToast({ title: '请填写任务名称', icon: 'none' }); return }
+    if (form.estimatedMinutes <= 0) { wx.showToast({ title: '请填写预计用时', icon: 'none' }); return }
 
     let deadline = null
     if (form.deadlineDate) {
@@ -209,12 +312,27 @@ Page({
         await callCloud('updateTask', { taskId: this.data.editTaskId, ...taskData })
         wx.hideLoading()
         wx.showToast({ title: '已保存', icon: 'success' })
+        setTimeout(() => wx.navigateBack(), 800)
       } else {
         await callCloud('addTask', taskData)
         wx.hideLoading()
+
+        // 判断是否应该加入今日计划
+        const today = new Date()
+        const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`
+        const isUrgentToday = (deadline && deadline.startsWith(todayStr)) || form.importance >= 3
+
+        if (isUrgentToday) {
+          getApp().globalData.newTaskForToday = {
+            title: form.title.trim(),
+            estimatedMinutes: form.estimatedMinutes,
+            lockedStartTime: form.schedulingMode === 'manual' ? form.lockedStartTime : null
+          }
+        }
+
         wx.showToast({ title: '已添加', icon: 'success' })
+        setTimeout(() => wx.navigateBack(), 600)
       }
-      setTimeout(() => wx.navigateBack(), 800)
     } catch (e) {
       wx.hideLoading()
       wx.showToast({ title: this.data.isEditMode ? '保存失败' : '添加失败', icon: 'none' })
