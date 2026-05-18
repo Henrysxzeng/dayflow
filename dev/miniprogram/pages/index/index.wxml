@@ -102,6 +102,55 @@
           </picker>
         </view>
       </view>
+      <!-- 晚饭时间 -->
+      <view class="card" style="margin-bottom:16rpx;">
+        <text style="font-size:28rpx; color:#374151; display:block; margin-bottom:14rpx;">🍽️ 有固定晚饭时间吗？</text>
+        <view class="row" style="gap:12rpx; margin-bottom:14rpx;">
+          <view bindtap="handleHabitsDinnerBreak" data-val="true" style="flex:1; text-align:center; padding:16rpx; border-radius:14rpx; background:{{habitsForm.hasDinnerBreak ? '#EFF6FF' : '#F9FAFB'}}; border:2rpx solid {{habitsForm.hasDinnerBreak ? '#2563EB' : 'transparent'}};">
+            <text style="font-size:26rpx; color:{{habitsForm.hasDinnerBreak ? '#2563EB' : '#374151'}}; font-weight:{{habitsForm.hasDinnerBreak ? '600' : '400'}};">有</text>
+          </view>
+          <view bindtap="handleHabitsDinnerBreak" data-val="false" style="flex:1; text-align:center; padding:16rpx; border-radius:14rpx; background:{{!habitsForm.hasDinnerBreak ? '#EFF6FF' : '#F9FAFB'}}; border:2rpx solid {{!habitsForm.hasDinnerBreak ? '#2563EB' : 'transparent'}};">
+            <text style="font-size:26rpx; color:{{!habitsForm.hasDinnerBreak ? '#2563EB' : '#374151'}}; font-weight:{{!habitsForm.hasDinnerBreak ? '600' : '400'}};">没有</text>
+          </view>
+        </view>
+        <view wx:if="{{habitsForm.hasDinnerBreak}}" class="row" style="gap:12rpx; align-items:center;">
+          <picker mode="time" start="17:00" end="21:00" bindchange="handleHabitsDinnerStart" value="{{habitsForm.dinnerStart}}">
+            <view style="background:#F3F4F6; border-radius:12rpx; padding:12rpx 20rpx;"><text style="font-size:26rpx; color:#111827;">{{habitsForm.dinnerStart}}</text></view>
+          </picker>
+          <text style="color:#6B7280; font-size:24rpx;">到</text>
+          <picker mode="time" start="17:30" end="22:00" bindchange="handleHabitsDinnerEnd" value="{{habitsForm.dinnerEnd}}">
+            <view style="background:#F3F4F6; border-radius:12rpx; padding:12rpx 20rpx;"><text style="font-size:26rpx; color:#111827;">{{habitsForm.dinnerEnd}}</text></view>
+          </picker>
+        </view>
+      </view>
+
+      <!-- 工作日/周末不同 -->
+      <view class="card" style="margin-bottom:24rpx;">
+        <text style="font-size:28rpx; color:#374151; display:block; margin-bottom:14rpx;">📅 周末作息不同吗？</text>
+        <view class="row" style="gap:12rpx; margin-bottom:14rpx;">
+          <view bindtap="handleHabitsWeekend" data-val="true" style="flex:1; text-align:center; padding:16rpx; border-radius:14rpx; background:{{habitsForm.weekendDifferent ? '#EFF6FF' : '#F9FAFB'}}; border:2rpx solid {{habitsForm.weekendDifferent ? '#2563EB' : 'transparent'}};">
+            <text style="font-size:26rpx; color:{{habitsForm.weekendDifferent ? '#2563EB' : '#374151'}}; font-weight:{{habitsForm.weekendDifferent ? '600' : '400'}};">不同（晚起晚睡）</text>
+          </view>
+          <view bindtap="handleHabitsWeekend" data-val="false" style="flex:1; text-align:center; padding:16rpx; border-radius:14rpx; background:{{!habitsForm.weekendDifferent ? '#EFF6FF' : '#F9FAFB'}}; border:2rpx solid {{!habitsForm.weekendDifferent ? '#2563EB' : 'transparent'}};">
+            <text style="font-size:26rpx; color:{{!habitsForm.weekendDifferent ? '#2563EB' : '#374151'}}; font-weight:{{!habitsForm.weekendDifferent ? '600' : '400'}};">一样</text>
+          </view>
+        </view>
+        <view wx:if="{{habitsForm.weekendDifferent}}" class="row" style="gap:20rpx;">
+          <view style="flex:1;">
+            <text style="font-size:22rpx; color:#6B7280; display:block; margin-bottom:8rpx;">周末起床</text>
+            <picker mode="time" start="05:00" end="14:00" bindchange="handleHabitsWeekendWake" value="{{habitsForm.weekendWakeTime}}">
+              <view style="background:#F3F4F6; border-radius:12rpx; padding:12rpx 20rpx; text-align:center;"><text style="font-size:26rpx; color:#111827;">{{habitsForm.weekendWakeTime}}</text></view>
+            </picker>
+          </view>
+          <view style="flex:1;">
+            <text style="font-size:22rpx; color:#6B7280; display:block; margin-bottom:8rpx;">周末睡觉</text>
+            <picker mode="time" start="21:00" end="04:00" bindchange="handleHabitsWeekendSleep" value="{{habitsForm.weekendSleepTime}}">
+              <view style="background:#F3F4F6; border-radius:12rpx; padding:12rpx 20rpx; text-align:center;"><text style="font-size:26rpx; color:#111827;">{{habitsForm.weekendSleepTime}}</text></view>
+            </picker>
+          </view>
+        </view>
+      </view>
+
       <view class="btn-primary" style="margin-bottom:16rpx;" bindtap="saveHabitsAndContinue">保存并加第一个任务</view>
       <view class="btn-ghost" bindtap="skipHabits">跳过</view>
     </view>
@@ -185,6 +234,22 @@
         <view>
           <text style="font-size:30rpx; font-weight:700; color:#1D4ED8; display:block;">还差 1 件，今天就赢了！</text>
           <text style="font-size:22rpx; color:#3B82F6; margin-top:4rpx; display:block;">Almost there — 这是最关键的一步</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 未规划的今日截止任务提示 -->
+    <view wx:if="{{unplannedUrgentTasks.length > 0}}" style="background:#FEF3C7; border-radius:20rpx; padding:24rpx 28rpx; margin-bottom:20rpx; border:2rpx solid #FDE68A;">
+      <view class="row-between">
+        <view class="row flex-1" style="margin-right:16rpx;">
+          <text style="font-size:28rpx; margin-right:12rpx;">⚠️</text>
+          <view class="flex-1">
+            <text style="font-size:26rpx; font-weight:700; color:#92400E; display:block;">还有 {{unplannedUrgentTasks.length}} 个今日截止任务未安排</text>
+            <text style="font-size:22rpx; color:#B45309; display:block; margin-top:4rpx;">{{unplannedUrgentTasks[0].title}}{{unplannedUrgentTasks.length > 1 ? ' 等' : ''}}</text>
+          </view>
+        </view>
+        <view bindtap="handleRegenerateSame" style="background:#F59E0B; border-radius:12rpx; padding:12rpx 22rpx; flex-shrink:0;">
+          <text style="font-size:24rpx; color:#FFF; font-weight:600;">重新规划</text>
         </view>
       </view>
     </view>

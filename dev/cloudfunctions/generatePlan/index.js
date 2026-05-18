@@ -56,12 +56,26 @@ const buildUserPrompt = (tasks, availableHours, date, tone, scheduleConstraints,
   let habitsSection = ''
   if (prefs.wake_time || prefs.sleep_time || prefs.has_lunch_break !== undefined) {
     habitsSection = `\n用户作息习惯：\n`
-    if (prefs.wake_time) habitsSection += `• 通常 ${prefs.wake_time} 起床，请勿在此之前安排任务\n`
-    if (prefs.sleep_time) habitsSection += `• 通常 ${prefs.sleep_time} 睡觉，请勿在此之后安排任务\n`
+    // 工作日/周末区分
+    const dateObj = new Date(date.replace(/-/g, '/'))
+    const isWeekend = dateObj.getDay() === 0 || dateObj.getDay() === 6
+    const wakeTime = isWeekend && prefs.weekend_different && prefs.weekend_wake_time
+      ? prefs.weekend_wake_time : prefs.wake_time
+    const sleepTime = isWeekend && prefs.weekend_different && prefs.weekend_sleep_time
+      ? prefs.weekend_sleep_time : prefs.sleep_time
+
+    if (isWeekend && prefs.weekend_different) {
+      habitsSection += `• 今天是${dateObj.getDay() === 0 ? '周日' : '周六'}（周末），使用周末时间表\n`
+    }
+    if (wakeTime) habitsSection += `• 通常 ${wakeTime} 起床，请勿在此之前安排任务\n`
+    if (sleepTime) habitsSection += `• 通常 ${sleepTime} 睡觉，请勿在此之后安排任务\n`
     if (prefs.has_lunch_break === true && prefs.lunch_start && prefs.lunch_end) {
       habitsSection += `• 有固定午休：${prefs.lunch_start}-${prefs.lunch_end}，请在 busy_slots 中加入并避开\n`
     } else if (prefs.has_lunch_break === false) {
       habitsSection += `• 该用户通常不固定午休，不要自动添加午饭时段\n`
+    }
+    if (prefs.has_dinner_break === true && prefs.dinner_start && prefs.dinner_end) {
+      habitsSection += `• 有固定晚饭时间：${prefs.dinner_start}-${prefs.dinner_end}，请在 busy_slots 中加入并避开\n`
     }
     if (prefs.peak_morning) habitsSection += `• 历史数据：上午是其高效时段\n`
     if (prefs.peak_evening) habitsSection += `• 历史数据：晚上是其高效时段\n`

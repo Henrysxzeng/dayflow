@@ -153,6 +153,13 @@ Page({
     }
   },
 
+  openHabitsSettings() {
+    // 跳回今日Tab并打开作息设置（第4步引导）
+    wx.switchTab({ url: '/pages/index/index' })
+    const app = getApp()
+    app.globalData.openHabitsSettings = true
+  },
+
   onShareAppMessage() {
     const { totalCompleted, streak } = this.data
     const now = new Date()

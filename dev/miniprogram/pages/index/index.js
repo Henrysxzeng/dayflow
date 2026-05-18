@@ -67,6 +67,8 @@ Page({
     showAchievement: false,
     achievementQueue: [],
     currentAchievement: null,
+    // 未规划的今日截止任务
+    unplannedUrgentTasks: [],
     // 分享
     shareImagePath: '',
     // 情绪收集
@@ -96,7 +98,12 @@ Page({
     // 新用户引导（4步骤）
     showOnboarding: false,
     onboardingStep: 0,
-    habitsForm: { wakeTime: '07:00', sleepTime: '23:00', hasLunchBreak: null, lunchStart: '12:00', lunchEnd: '13:30' },
+    habitsForm: {
+      wakeTime: '07:00', sleepTime: '23:00',
+      hasLunchBreak: null, lunchStart: '12:00', lunchEnd: '13:30',
+      hasDinnerBreak: false, dinnerStart: '18:00', dinnerEnd: '19:00',
+      weekendDifferent: false, weekendWakeTime: '09:00', weekendSleepTime: '00:00'
+    },
     // 可用时长选择弹窗
     showCustomHoursModal: false,
     customHoursVal: '3',
@@ -136,6 +143,13 @@ Page({
       this._startPomodoroTick()
     }
     // 处理新建任务后的今日新任务提示
+    // 从设置页跳来修改作息
+    if (getApp().globalData.openHabitsSettings) {
+      getApp().globalData.openHabitsSettings = false
+      this.setData({ showOnboarding: true, onboardingStep: 3 })
+      return
+    }
+
     const newTask = getApp().globalData.newTaskForToday
     if (newTask) {
       getApp().globalData.newTaskForToday = null
@@ -331,8 +345,27 @@ Page({
     if (this.data.pendingNewTaskNotice) {
       const notice = this.data.pendingNewTaskNotice
       this.setData({ pendingNewTaskNotice: null })
-      setTimeout(() => this._showNewTaskModal(notice), 500)
+      const self = this
+      setTimeout(function() { self._showNewTaskModal(notice) }, 500)
+      return
     }
+
+    // 所有计划任务完成后，检测是否还有今日截止但未加入计划的任务
+    const plannedIds = plan.selected_task_ids || []
+    this._checkUnplannedTodayTasks(plannedIds)
+  },
+
+  _checkUnplannedTodayTasks(plannedIds) {
+    const today = todayString()
+    const self = this
+    callCloud('getTasks').then(function(res) {
+      const unplanned = (res.tasks || []).filter(function(t) {
+        return t.status === 'pending' &&
+               plannedIds.indexOf(t._id) === -1 &&
+               t.deadline && t.deadline.startsWith(today)
+      })
+      self.setData({ unplannedUrgentTasks: unplanned })
+    }).catch(function() {})
   },
 
   buildScheduleItems(tasks, busySlots) {
@@ -898,18 +931,24 @@ Page({
   handleHabitsLunchEnd(e) { this.setData({ 'habitsForm.lunchEnd': e.detail.value }) },
 
   async saveHabitsAndContinue() {
-    const { habitsForm } = this.data
+    const f = this.data.habitsForm
     try {
       await callCloud('saveSchedulePreferences', {
-        wakeTime: habitsForm.wakeTime,
-        sleepTime: habitsForm.sleepTime,
-        hasLunchBreak: habitsForm.hasLunchBreak,
-        lunchStart: habitsForm.lunchStart,
-        lunchEnd: habitsForm.lunchEnd
+        wakeTime: f.wakeTime, sleepTime: f.sleepTime,
+        hasLunchBreak: f.hasLunchBreak, lunchStart: f.lunchStart, lunchEnd: f.lunchEnd,
+        hasDinnerBreak: f.hasDinnerBreak, dinnerStart: f.dinnerStart, dinnerEnd: f.dinnerEnd,
+        weekendDifferent: f.weekendDifferent, weekendWakeTime: f.weekendWakeTime, weekendSleepTime: f.weekendSleepTime
       })
     } catch (e) { }
     wx.navigateTo({ url: '/pages/add-task/add-task' })
   },
+
+  handleHabitsDinnerBreak(e) { this.setData({ 'habitsForm.hasDinnerBreak': e.currentTarget.dataset.val === 'true' }) },
+  handleHabitsDinnerStart(e) { this.setData({ 'habitsForm.dinnerStart': e.detail.value }) },
+  handleHabitsDinnerEnd(e) { this.setData({ 'habitsForm.dinnerEnd': e.detail.value }) },
+  handleHabitsWeekend(e) { this.setData({ 'habitsForm.weekendDifferent': e.currentTarget.dataset.val === 'true' }) },
+  handleHabitsWeekendWake(e) { this.setData({ 'habitsForm.weekendWakeTime': e.detail.value }) },
+  handleHabitsWeekendSleep(e) { this.setData({ 'habitsForm.weekendSleepTime': e.detail.value }) },
 
   skipHabits() {
     wx.navigateTo({ url: '/pages/add-task/add-task' })
