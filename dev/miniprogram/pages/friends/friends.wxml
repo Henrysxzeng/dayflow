@@ -136,10 +136,10 @@
     <input
       type="text"
       placeholder="例：FCAB34"
-      placeholder-style="color:#D1D5DB; font-size:28rpx; letter-spacing:4rpx;"
+      placeholder-style="color:#D1D5DB; font-size:30rpx; letter-spacing:4rpx; text-align:center;"
       bindinput="handleCodeInput"
       value="{{inputCode}}"
-      style="background:#F3F4F6; border-radius:16rpx; padding:20rpx; font-size:32rpx; color:#111827; text-align:center; letter-spacing:6rpx; width:100%; box-sizing:border-box; margin-bottom:20rpx; font-weight:700;"
+      style="height:88rpx; background:#F3F4F6; border-radius:16rpx; padding:0 24rpx; font-size:32rpx; color:#111827; text-align:center; letter-spacing:6rpx; width:100%; box-sizing:border-box; margin-bottom:20rpx; font-weight:700;"
       maxlength="6"
     />
     <view class="btn-primary" bindtap="handleAddFriend">添加好友</view>
@@ -164,10 +164,10 @@
         <input
           type="text"
           placeholder="怎么称呼你？"
-          placeholder-style="color:#D1D5DB;"
+          placeholder-style="color:#D1D5DB; font-size:28rpx;"
           bindinput="handleNameInput"
           value="{{editName}}"
-          style="background:#F3F4F6; border-radius:14rpx; padding:18rpx 20rpx; font-size:30rpx; color:#111827; width:100%; box-sizing:border-box;"
+          style="height:80rpx; background:#F3F4F6; border-radius:14rpx; padding:0 20rpx; font-size:30rpx; color:#111827; width:100%; box-sizing:border-box;"
           maxlength="12"
         />
       </view>
