@@ -1,0 +1,597 @@
+<view class="page-container">
+
+  <!-- 顶部：日期 + Streak -->
+  <view class="row-between" style="padding-top:24rpx; margin-bottom:24rpx;">
+    <view>
+      <view style="font-size:24rpx; color:#6B7280;">{{dateDisplay}}</view>
+      <view style="font-size:36rpx; font-weight:700; margin-top:4rpx;">
+        <block wx:if="{{planReady}}">今天，就做这几件</block>
+        <block wx:elif="{{waitingForSchedule}}">告诉 Flow 你的时间</block>
+        <block wx:elif="{{showOnboarding}}">欢迎使用 FlowCast</block>
+        <block wx:elif="{{showRestDay}}">今天没有安排</block>
+        <block wx:else>今天能用多少时间？</block>
+      </view>
+    </view>
+    <view wx:if="{{streak > 0}}" style="display:flex; flex-direction:column; align-items:center;">
+      <text style="font-size:40rpx;">🔥</text>
+      <text style="font-size:22rpx; color:#F97316; font-weight:600;">{{streak}}天</text>
+    </view>
+  </view>
+
+  <!-- 新用户引导（3步沉浸式） -->
+  <view wx:if="{{showOnboarding}}">
+    <!-- 步骤指示器 -->
+    <view class="row" style="justify-content:center; margin-bottom:48rpx;">
+      <view style="width:{{onboardingStep === 0 ? '40rpx' : '12rpx'}}; height:12rpx; border-radius:6rpx; background:{{onboardingStep === 0 ? '#2563EB' : '#E5E7EB'}}; margin:0 6rpx; transition:all 0.3s;"></view>
+      <view style="width:{{onboardingStep === 1 ? '40rpx' : '12rpx'}}; height:12rpx; border-radius:6rpx; background:{{onboardingStep === 1 ? '#2563EB' : '#E5E7EB'}}; margin:0 6rpx; transition:all 0.3s;"></view>
+      <view style="width:{{onboardingStep === 2 ? '40rpx' : '12rpx'}}; height:12rpx; border-radius:6rpx; background:{{onboardingStep === 2 ? '#2563EB' : '#E5E7EB'}}; margin:0 6rpx; transition:all 0.3s;"></view>
+    </view>
+
+    <!-- Step 0：痛点共鸣 -->
+    <view wx:if="{{onboardingStep === 0}}" style="text-align:center; padding:32rpx 16rpx;">
+      <text style="font-size:96rpx; display:block; margin-bottom:40rpx;">😵‍💫</text>
+      <text style="font-size:36rpx; font-weight:700; color:#111827; display:block; margin-bottom:24rpx; line-height:52rpx;">任务一堆，不知道先做哪个？</text>
+      <text style="font-size:28rpx; color:#6B7280; display:block; line-height:44rpx; margin-bottom:64rpx;">这种焦虑感很正常。大多数人不缺执行力，缺的是一个每天告诉他"就做这几件"的声音。</text>
+      <view class="btn-primary" bindtap="nextOnboardingStep">Flow 来帮你 →</view>
+    </view>
+
+    <!-- Step 1：产品核心价值 -->
+    <view wx:if="{{onboardingStep === 1}}" style="text-align:center; padding:32rpx 16rpx;">
+      <text style="font-size:96rpx; display:block; margin-bottom:40rpx;">🎯</text>
+      <text style="font-size:36rpx; font-weight:700; color:#111827; display:block; margin-bottom:24rpx; line-height:52rpx;">每天早上，Flow 帮你选出最重要的几件事</text>
+      <view style="background:#EFF6FF; border-radius:20rpx; padding:32rpx; margin-bottom:40rpx; text-align:left;">
+        <view class="row" style="margin-bottom:20rpx;">
+          <text style="font-size:32rpx; margin-right:16rpx;">⏰</text>
+          <text style="font-size:26rpx; color:#1D4ED8; line-height:40rpx;">告诉它今天有几小时</text>
+        </view>
+        <view class="row" style="margin-bottom:20rpx;">
+          <text style="font-size:32rpx; margin-right:16rpx;">🧠</text>
+          <text style="font-size:26rpx; color:#1D4ED8; line-height:40rpx;">AI 根据你的能量曲线安排时段</text>
+        </view>
+        <view class="row">
+          <text style="font-size:32rpx; margin-right:16rpx;">✅</text>
+          <text style="font-size:26rpx; color:#1D4ED8; line-height:40rpx;">执行，勾掉，有成就感</text>
+        </view>
+      </view>
+      <view class="btn-primary" bindtap="nextOnboardingStep">听起来不错 →</view>
+    </view>
+
+    <!-- Step 2：长期价值 -->
+    <view wx:if="{{onboardingStep === 2}}" style="text-align:center; padding:32rpx 16rpx;">
+      <text style="font-size:96rpx; display:block; margin-bottom:40rpx;">🌱</text>
+      <text style="font-size:36rpx; font-weight:700; color:#111827; display:block; margin-bottom:24rpx; line-height:52rpx;">用得越久，Flow 越懂你</text>
+      <text style="font-size:28rpx; color:#6B7280; display:block; line-height:44rpx; margin-bottom:48rpx;">7天后分析拖延规律，14天后优化能量时段，30天后成为你真正的私人助手。</text>
+      <view class="btn-primary" bindtap="nextOnboardingStep">下一步：告诉 Flow 你的作息 →</view>
+    </view>
+
+    <!-- Step 3：用户习惯设置 -->
+    <view wx:if="{{onboardingStep === 3}}" style="padding:16rpx 0;">
+      <text style="font-size:32rpx; font-weight:700; color:#111827; display:block; margin-bottom:8rpx;">告诉 Flow 你的作息习惯</text>
+      <text style="font-size:24rpx; color:#6B7280; display:block; margin-bottom:24rpx;">Flow 会避开你的休息时间排任务</text>
+      <view class="card" style="margin-bottom:16rpx;">
+        <view class="row-between" style="margin-bottom:16rpx;">
+          <text style="font-size:28rpx; color:#374151;">🌅 起床时间</text>
+          <picker mode="time" start="04:00" end="12:00" bindchange="handleHabitsWakeTime" value="{{habitsForm.wakeTime}}">
+            <text style="font-size:28rpx; color:#2563EB; font-weight:600;">{{habitsForm.wakeTime}} ›</text>
+          </picker>
+        </view>
+        <view class="row-between">
+          <text style="font-size:28rpx; color:#374151;">🌙 睡觉时间</text>
+          <picker mode="time" start="20:00" end="04:00" bindchange="handleHabitsSleepTime" value="{{habitsForm.sleepTime}}">
+            <text style="font-size:28rpx; color:#2563EB; font-weight:600;">{{habitsForm.sleepTime}} ›</text>
+          </picker>
+        </view>
+      </view>
+      <view class="card" style="margin-bottom:24rpx;">
+        <text style="font-size:28rpx; color:#374151; display:block; margin-bottom:14rpx;">🍱 有固定午休吗？</text>
+        <view class="row" style="gap:12rpx; margin-bottom:14rpx;">
+          <view bindtap="handleHabitsLunchBreak" data-val="true" style="flex:1; text-align:center; padding:16rpx; border-radius:14rpx; background:{{habitsForm.hasLunchBreak === true ? '#EFF6FF' : '#F9FAFB'}}; border:2rpx solid {{habitsForm.hasLunchBreak === true ? '#2563EB' : 'transparent'}};">
+            <text style="font-size:26rpx; color:{{habitsForm.hasLunchBreak === true ? '#2563EB' : '#374151'}}; font-weight:{{habitsForm.hasLunchBreak === true ? '600' : '400'}};">有</text>
+          </view>
+          <view bindtap="handleHabitsLunchBreak" data-val="false" style="flex:1; text-align:center; padding:16rpx; border-radius:14rpx; background:{{habitsForm.hasLunchBreak === false ? '#EFF6FF' : '#F9FAFB'}}; border:2rpx solid {{habitsForm.hasLunchBreak === false ? '#2563EB' : 'transparent'}};">
+            <text style="font-size:26rpx; color:{{habitsForm.hasLunchBreak === false ? '#2563EB' : '#374151'}}; font-weight:{{habitsForm.hasLunchBreak === false ? '600' : '400'}};">没有</text>
+          </view>
+        </view>
+        <view wx:if="{{habitsForm.hasLunchBreak === true}}" class="row" style="gap:12rpx; align-items:center;">
+          <picker mode="time" start="11:00" end="14:00" bindchange="handleHabitsLunchStart" value="{{habitsForm.lunchStart}}">
+            <view style="background:#F3F4F6; border-radius:12rpx; padding:12rpx 20rpx;"><text style="font-size:26rpx; color:#111827;">{{habitsForm.lunchStart}}</text></view>
+          </picker>
+          <text style="color:#6B7280; font-size:24rpx;">到</text>
+          <picker mode="time" start="12:00" end="15:00" bindchange="handleHabitsLunchEnd" value="{{habitsForm.lunchEnd}}">
+            <view style="background:#F3F4F6; border-radius:12rpx; padding:12rpx 20rpx;"><text style="font-size:26rpx; color:#111827;">{{habitsForm.lunchEnd}}</text></view>
+          </picker>
+        </view>
+      </view>
+      <!-- 晚饭时间 -->
+      <view class="card" style="margin-bottom:16rpx;">
+        <text style="font-size:28rpx; color:#374151; display:block; margin-bottom:14rpx;">🍽️ 有固定晚饭时间吗？</text>
+        <view class="row" style="gap:12rpx; margin-bottom:14rpx;">
+          <view bindtap="handleHabitsDinnerBreak" data-val="true" style="flex:1; text-align:center; padding:16rpx; border-radius:14rpx; background:{{habitsForm.hasDinnerBreak ? '#EFF6FF' : '#F9FAFB'}}; border:2rpx solid {{habitsForm.hasDinnerBreak ? '#2563EB' : 'transparent'}};">
+            <text style="font-size:26rpx; color:{{habitsForm.hasDinnerBreak ? '#2563EB' : '#374151'}}; font-weight:{{habitsForm.hasDinnerBreak ? '600' : '400'}};">有</text>
+          </view>
+          <view bindtap="handleHabitsDinnerBreak" data-val="false" style="flex:1; text-align:center; padding:16rpx; border-radius:14rpx; background:{{!habitsForm.hasDinnerBreak ? '#EFF6FF' : '#F9FAFB'}}; border:2rpx solid {{!habitsForm.hasDinnerBreak ? '#2563EB' : 'transparent'}};">
+            <text style="font-size:26rpx; color:{{!habitsForm.hasDinnerBreak ? '#2563EB' : '#374151'}}; font-weight:{{!habitsForm.hasDinnerBreak ? '600' : '400'}};">没有</text>
+          </view>
+        </view>
+        <view wx:if="{{habitsForm.hasDinnerBreak}}" class="row" style="gap:12rpx; align-items:center;">
+          <picker mode="time" start="17:00" end="21:00" bindchange="handleHabitsDinnerStart" value="{{habitsForm.dinnerStart}}">
+            <view style="background:#F3F4F6; border-radius:12rpx; padding:12rpx 20rpx;"><text style="font-size:26rpx; color:#111827;">{{habitsForm.dinnerStart}}</text></view>
+          </picker>
+          <text style="color:#6B7280; font-size:24rpx;">到</text>
+          <picker mode="time" start="17:30" end="22:00" bindchange="handleHabitsDinnerEnd" value="{{habitsForm.dinnerEnd}}">
+            <view style="background:#F3F4F6; border-radius:12rpx; padding:12rpx 20rpx;"><text style="font-size:26rpx; color:#111827;">{{habitsForm.dinnerEnd}}</text></view>
+          </picker>
+        </view>
+      </view>
+
+      <!-- 工作日/周末不同 -->
+      <view class="card" style="margin-bottom:24rpx;">
+        <text style="font-size:28rpx; color:#374151; display:block; margin-bottom:14rpx;">📅 周末作息不同吗？</text>
+        <view class="row" style="gap:12rpx; margin-bottom:14rpx;">
+          <view bindtap="handleHabitsWeekend" data-val="true" style="flex:1; text-align:center; padding:16rpx; border-radius:14rpx; background:{{habitsForm.weekendDifferent ? '#EFF6FF' : '#F9FAFB'}}; border:2rpx solid {{habitsForm.weekendDifferent ? '#2563EB' : 'transparent'}};">
+            <text style="font-size:26rpx; color:{{habitsForm.weekendDifferent ? '#2563EB' : '#374151'}}; font-weight:{{habitsForm.weekendDifferent ? '600' : '400'}};">不同（晚起晚睡）</text>
+          </view>
+          <view bindtap="handleHabitsWeekend" data-val="false" style="flex:1; text-align:center; padding:16rpx; border-radius:14rpx; background:{{!habitsForm.weekendDifferent ? '#EFF6FF' : '#F9FAFB'}}; border:2rpx solid {{!habitsForm.weekendDifferent ? '#2563EB' : 'transparent'}};">
+            <text style="font-size:26rpx; color:{{!habitsForm.weekendDifferent ? '#2563EB' : '#374151'}}; font-weight:{{!habitsForm.weekendDifferent ? '600' : '400'}};">一样</text>
+          </view>
+        </view>
+        <view wx:if="{{habitsForm.weekendDifferent}}" class="row" style="gap:20rpx;">
+          <view style="flex:1;">
+            <text style="font-size:22rpx; color:#6B7280; display:block; margin-bottom:8rpx;">周末起床</text>
+            <picker mode="time" start="05:00" end="14:00" bindchange="handleHabitsWeekendWake" value="{{habitsForm.weekendWakeTime}}">
+              <view style="background:#F3F4F6; border-radius:12rpx; padding:12rpx 20rpx; text-align:center;"><text style="font-size:26rpx; color:#111827;">{{habitsForm.weekendWakeTime}}</text></view>
+            </picker>
+          </view>
+          <view style="flex:1;">
+            <text style="font-size:22rpx; color:#6B7280; display:block; margin-bottom:8rpx;">周末睡觉</text>
+            <picker mode="time" start="21:00" end="04:00" bindchange="handleHabitsWeekendSleep" value="{{habitsForm.weekendSleepTime}}">
+              <view style="background:#F3F4F6; border-radius:12rpx; padding:12rpx 20rpx; text-align:center;"><text style="font-size:26rpx; color:#111827;">{{habitsForm.weekendSleepTime}}</text></view>
+            </picker>
+          </view>
+        </view>
+      </view>
+
+      <view class="btn-primary" style="margin-bottom:16rpx;" bindtap="saveHabitsAndContinue">保存并加第一个任务</view>
+      <view class="btn-ghost" bindtap="skipHabits">跳过</view>
+    </view>
+  </view>
+
+  <!-- 今天无任务（老用户）-->
+  <view wx:elif="{{showRestDay}}" class="card" style="text-align:center; padding:64rpx 32rpx;">
+    <text style="font-size:80rpx; display:block; margin-bottom:24rpx;">🌿</text>
+    <text style="font-size:30rpx; font-weight:600; color:#111827; display:block; margin-bottom:12rpx;">今天没有待办任务</text>
+    <text style="font-size:26rpx; color:#6B7280; display:block; margin-bottom:48rpx; line-height:40rpx;">休息也是进步的一部分。</text>
+    <view wx:if="{{!restDayDone}}" class="btn-primary" style="margin-bottom:20rpx;" bindtap="handleRestDay">今日休息，🔥 Streak 继续延续</view>
+    <view wx:else style="padding:24rpx 0;"><text style="color:#16A34A; font-size:28rpx; font-weight:600;">✓ 今天已标记为休息日</text></view>
+    <view class="btn-ghost" style="margin-top:8rpx;" bindtap="goAddFirstTask">或者加一个新任务</view>
+  </view>
+
+  <!-- 时间约束输入步骤 -->
+  <view wx:elif="{{waitingForSchedule}}">
+    <view class="card" style="margin-bottom:24rpx;">
+      <view class="row-between" style="margin-bottom:16rpx;">
+        <text style="font-size:26rpx; color:#6B7280; flex:1; line-height:40rpx;">今天有固定安排吗？告诉 Flow，帮你把任务塞进空档。</text>
+        <view bindtap="handleSkipSchedule" style="padding:8rpx 0 8rpx 24rpx; flex-shrink:0;">
+          <text style="font-size:26rpx; color:#9CA3AF;">跳过 →</text>
+        </view>
+      </view>
+      <textarea
+        style="width:100%; min-height:160rpx; font-size:30rpx; color:#111827; line-height:48rpx; box-sizing:border-box;"
+        placeholder="例：上午9-11点开会，下午3点接孩子&#10;或：全天自由，没有固定安排"
+        placeholder-style="color:#D1D5DB;"
+        bindinput="handleScheduleInput"
+        value="{{scheduleInput}}"
+        auto-focus="{{true}}"
+        adjust-position="{{true}}"
+      />
+    </view>
+    <view class="btn-primary" bindtap="handleGenerateWithSchedule">
+      帮我安排具体时间
+    </view>
+  </view>
+
+  <!-- 正常内容区域 -->
+  <block wx:elif="{{!showOnboarding && !showRestDay && !waitingForSchedule}}">
+
+    <!-- AI 今日语 -->
+    <view wx:if="{{aiSummary && planReady}}" style="margin-bottom:32rpx; padding:24rpx 28rpx; background:#EFF6FF; border-radius:16rpx;">
+      <text style="font-size:26rpx; color:#1D4ED8; line-height:40rpx;">"{{aiSummary}}"</text>
+    </view>
+
+    <!-- 时长选择器（未生成计划时，且没有已完成任务残留） -->
+    <view wx:if="{{!planReady && !allTasksDone && completedTasksHistory.length === 0}}" class="card">
+      <scroll-view scroll-x style="white-space:nowrap; margin-bottom:16rpx;">
+        <view
+          wx:for="{{hourOptions}}"
+          wx:key="value"
+          class="chip {{selectedHours === item.value ? 'active' : ''}}"
+          style="display:inline-flex;"
+          bindtap="handleHoursSelect"
+          data-value="{{item.value}}"
+        >{{item.label}}</view>
+      </scroll-view>
+      <!-- 生成中状态 -->
+      <view wx:if="{{generating}}" style="text-align:center; padding:16rpx 0; color:#2563EB; font-size:26rpx;">
+        Flow 正在规划中，请稍候...
+      </view>
+      <!-- 可选：告诉Flow今天的时间安排（不是强制步骤）-->
+      <view wx:if="{{!generating}}" bindtap="handleOpenScheduleInput" style="text-align:center; padding:8rpx 0;">
+        <text style="font-size:22rpx; color:#9CA3AF;">📅 有固定安排？告诉 Flow 帮你避开 →</text>
+      </view>
+    </view>
+
+    <!-- 计划已生成：时长标签 + 修改 + 编辑约束 -->
+    <view wx:if="{{planReady}}" class="row-between" style="margin-bottom:24rpx;">
+      <text style="font-size:24rpx; color:#6B7280;">今日可用时间</text>
+      <view style="display:flex; align-items:center;">
+        <text wx:if="{{scheduleConstraints}}" bindtap="handleOpenScheduleInput" style="font-size:20rpx; color:#F59E0B; background:#FFFBEB; border:1rpx solid #FDE68A; padding:4rpx 16rpx; border-radius:12rpx; max-width:180rpx; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-right:16rpx;">📌 {{scheduleConstraints}}</text>
+        <text wx:else bindtap="handleOpenScheduleInput" style="font-size:20rpx; color:#6B7280; background:#F3F4F6; padding:4rpx 16rpx; border-radius:12rpx; margin-right:16rpx;">📅 有事要避开</text>
+        <view bindtap="handleRegenerate" style="display:flex; align-items:center; background:#EFF6FF; padding:8rpx 20rpx; border-radius:20rpx;">
+          <text style="font-size:26rpx; color:#2563EB; font-weight:600;">{{availableHours}}小时</text>
+          <text style="font-size:22rpx; color:#2563EB; margin-left:8rpx;">修改 ›</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 最难任务完成短暂反馈（3秒自动消失） -->
+    <view wx:if="{{showHardestBanner}}" style="background:#FFF7ED; border-radius:16rpx; padding:20rpx 28rpx; margin-bottom:16rpx; border:2rpx solid #FED7AA; display:flex; align-items:center;">
+      <text style="font-size:32rpx; margin-right:12rpx;">💪</text>
+      <text style="font-size:26rpx; color:#C2410C; font-weight:600;">今天最难的一件，刚才搞定了</text>
+    </view>
+
+    <!-- 临门一脚横幅（还差1件时） -->
+    <view wx:if="{{almostThere && !allTasksDone}}" style="background:linear-gradient(135deg,#EFF6FF,#DBEAFE); border-radius:20rpx; padding:28rpx; margin-bottom:24rpx; border:2rpx solid #BFDBFE;">
+      <view class="row">
+        <text style="font-size:36rpx; margin-right:12rpx;">🔥</text>
+        <view>
+          <text style="font-size:30rpx; font-weight:700; color:#1D4ED8; display:block;">还差 1 件，今天就赢了！</text>
+          <text style="font-size:22rpx; color:#3B82F6; margin-top:4rpx; display:block;">Almost there — 这是最关键的一步</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 未规划的今日截止任务提示 -->
+    <view wx:if="{{unplannedUrgentTasks.length > 0}}" style="background:#FEF3C7; border-radius:20rpx; padding:24rpx 28rpx; margin-bottom:20rpx; border:2rpx solid #FDE68A;">
+      <view class="row-between">
+        <view class="row flex-1" style="margin-right:16rpx;">
+          <text style="font-size:28rpx; margin-right:12rpx;">⚠️</text>
+          <view class="flex-1">
+            <text style="font-size:26rpx; font-weight:700; color:#92400E; display:block;">还有 {{unplannedUrgentTasks.length}} 个今日截止任务未安排</text>
+            <text style="font-size:22rpx; color:#B45309; display:block; margin-top:4rpx;">{{unplannedUrgentTasks[0].title}}{{unplannedUrgentTasks.length > 1 ? ' 等' : ''}}</text>
+          </view>
+        </view>
+        <view bindtap="handleReplanUnplanned" style="background:#F59E0B; border-radius:12rpx; padding:12rpx 22rpx; flex-shrink:0;">
+          <text style="font-size:24rpx; color:#FFF; font-weight:600;">重新规划</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 今日全部完成横幅 -->
+    <view wx:if="{{allTasksDone}}" style="background:linear-gradient(135deg,#F0FDF4,#ECFDF5); border-radius:20rpx; padding:32rpx 28rpx; margin-bottom:24rpx; border:2rpx solid #BBF7D0;">
+      <view class="row" style="margin-bottom:12rpx;">
+        <text style="font-size:36rpx; margin-right:12rpx;">🎉</text>
+        <text style="font-size:30rpx; font-weight:700; color:#15803D;">今日任务全部完成</text>
+      </view>
+      <text style="font-size:24rpx; color:#166534; line-height:38rpx;">{{allDoneQuote}}</text>
+    </view>
+
+    <!-- 今日任务（日程表模式 或 普通模式） -->
+    <view wx:if="{{planReady && scheduleItems.length > 0}}">
+      <view class="row-between" style="margin-bottom:16rpx;">
+        <text class="section-title">📋 今日任务</text>
+        <text style="font-size:24rpx; color:#6B7280;">共{{totalMinutes}}分钟</text>
+      </view>
+
+      <view wx:for="{{scheduleItems}}" wx:key="index">
+
+        <!-- 忙碌时段分隔 -->
+        <view wx:if="{{item.itemType === 'busy'}}" style="margin-bottom:16rpx; display:flex; align-items:center; gap:16rpx;">
+          <view style="flex:1; height:1rpx; background:#FEE2E2;"></view>
+          <text style="font-size:22rpx; color:#DC2626; background:#FEF2F2; padding:6rpx 16rpx; border-radius:20rpx; white-space:nowrap;">🚫 {{item.timeDisplay}} {{item.title}}</text>
+          <view style="flex:1; height:1rpx; background:#FEE2E2;"></view>
+        </view>
+
+        <!-- 任务卡片 -->
+        <view wx:elif="{{item.itemType === 'task'}}" class="card" style="padding:24rpx 28rpx; margin-bottom:16rpx; {{item.completed ? 'opacity:0.5;' : ''}}">
+          <!-- 时间标签（有日程时显示） -->
+          <view wx:if="{{item.timeDisplay}}" style="margin-bottom:10rpx;">
+            <text style="font-size:22rpx; color:#2563EB; background:#EFF6FF; padding:4rpx 16rpx; border-radius:20rpx;">🕐 {{item.timeDisplay}}</text>
+          </view>
+          <view class="row">
+            <view
+              bindtap="handleTaskCheck"
+              data-id="{{item._id}}"
+              style="width:48rpx; height:48rpx; border-radius:50%; border:3rpx solid {{item.completed ? '#16A34A' : '#D1D5DB'}}; background:{{item.completed ? '#16A34A' : '#FFF'}}; display:flex; align-items:center; justify-content:center; margin-right:24rpx; flex-shrink:0;"
+            >
+              <text wx:if="{{item.completed}}" style="color:#FFF; font-size:26rpx;">✓</text>
+            </view>
+            <view class="flex-1">
+              <text style="font-size:30rpx; font-weight:500; color:{{item.completed ? '#D1D5DB' : '#111827'}}; text-decoration:{{item.completed ? 'line-through' : 'none'}};">{{item.title}}</text>
+              <text wx:if="{{item.note}}" style="display:block; font-size:24rpx; color:#6B7280; margin-top:6rpx;">{{item.note}}</text>
+            </view>
+            <view style="display:flex; flex-direction:column; align-items:flex-end; margin-left:16rpx; flex-shrink:0; gap:10rpx;">
+              <text style="font-size:24rpx; color:#6B7280;">{{item.durationDisplay}}</text>
+              <view wx:if="{{!item.completed}}" bindtap="handleStartPomodoro" data-id="{{item._id}}" data-title="{{item.title}}" style="background:#FEF3C7; border-radius:12rpx; padding:4rpx 16rpx;">
+                <text style="font-size:20rpx; color:#92400E;">🍅 {{item.remainingPomodoros > 1 ? item.remainingPomodoros + '个' : '专注'}}</text>
+              </view>
+            </view>
+          </view>
+        </view>
+
+      </view>
+
+      <view style="text-align:center; font-size:24rpx; color:#9CA3AF; margin-bottom:32rpx;">留 {{bufferMinutes}} 分钟缓冲</view>
+    </view>
+
+    <!-- 随手清空 -->
+    <view wx:if="{{fragmentTasks.length > 0}}" style="margin-bottom:32rpx;">
+      <view class="row-between" bindtap="toggleFragments" style="margin-bottom:16rpx;">
+        <text class="section-title">⚡ 随手清空</text>
+        <text style="font-size:24rpx; color:#D97706;">{{fragmentTasks.length}}件</text>
+      </view>
+      <view wx:if="{{showFragments}}" class="card" style="padding:16rpx 28rpx;">
+        <view
+          wx:for="{{fragmentTasks}}"
+          wx:key="_id"
+          class="row"
+          style="padding:16rpx 0; border-bottom:1rpx solid #F3F4F6;"
+          bindtap="handleFragmentCheck"
+          data-id="{{item._id}}"
+        >
+          <view style="width:36rpx; height:36rpx; border-radius:50%; border:2rpx solid {{item.completed ? '#16A34A' : '#D1D5DB'}}; background:{{item.completed ? '#16A34A' : '#FFF'}}; margin-right:20rpx; flex-shrink:0; display:flex; align-items:center; justify-content:center;">
+            <text wx:if="{{item.completed}}" style="color:#FFF; font-size:22rpx;">✓</text>
+          </view>
+          <text style="flex:1; font-size:28rpx; color:{{item.completed ? '#D1D5DB' : '#374151'}}; text-decoration:{{item.completed ? 'line-through' : 'none'}};">{{item.title}}</text>
+          <text style="font-size:22rpx; color:#9CA3AF;">{{item.durationDisplay}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 重新生成 -->
+    <view wx:if="{{planReady}}" bindtap="handleRegenerateSame" style="text-align:center; font-size:24rpx; color:#9CA3AF; margin-bottom:32rpx; padding:16rpx;">
+      ↺ 重新生成计划
+    </view>
+
+    <!-- 今日已完成记录（重排后仍保留显示）-->
+    <view wx:if="{{completedTasksHistory.length > 0}}" style="margin-bottom:48rpx;">
+      <view style="font-size:22rpx; color:#9CA3AF; font-weight:600; letter-spacing:2rpx; display:block; margin-bottom:12rpx; text-align:center;">─── 今日已完成 ───</view>
+      <view wx:for="{{completedTasksHistory}}" wx:key="_id" style="padding:16rpx 24rpx; margin-bottom:10rpx; background:#F9FAFB; border-radius:16rpx; opacity:0.6; display:flex; align-items:center;">
+        <text style="font-size:28rpx; color:#16A34A; margin-right:16rpx;">✓</text>
+        <text style="flex:1; font-size:26rpx; color:#6B7280; text-decoration:line-through;">{{item.title}}</text>
+        <text style="font-size:22rpx; color:#9CA3AF;">{{item.durationDisplay}}</text>
+      </view>
+    </view>
+
+  </block>
+
+</view>
+
+<!-- 番茄钟全屏专注模式 -->
+<view wx:if="{{showPomodoro}}" style="position:fixed; top:0; left:0; right:0; bottom:0; background:#FAFAFA; z-index:1001; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:64rpx;">
+
+  <!-- 状态标签 -->
+  <view style="position:absolute; top:80rpx; left:0; right:0; text-align:center;">
+    <text style="font-size:24rpx; color:#6B7280; letter-spacing:4rpx;">{{pomodoroPhase === 'focus' ? '🍅 专注中' : '☕ 休息中'}}</text>
+    <text wx:if="{{pomodoroCount > 0}}" style="font-size:22rpx; color:#D97706; margin-left:16rpx;">第 {{pomodoroCount}} 个</text>
+  </view>
+
+  <!-- 任务名 -->
+  <text style="font-size:30rpx; color:#6B7280; text-align:center; margin-bottom:48rpx; max-width:80%; line-height:44rpx;">{{pomodoroTaskTitle}}</text>
+
+  <!-- 大计时器 -->
+  <view style="width:320rpx; height:320rpx; border-radius:160rpx; background:#FFF; box-shadow:0 8rpx 40rpx rgba(0,0,0,0.08); display:flex; flex-direction:column; align-items:center; justify-content:center; margin-bottom:48rpx; position:relative;">
+    <!-- 进度环（用border模拟） -->
+    <view style="position:absolute; top:0; left:0; right:0; bottom:0; border-radius:160rpx; border:8rpx solid {{pomodoroPhase === 'focus' ? '#2563EB' : '#16A34A'}}; opacity:0.15;"></view>
+    <text style="font-size:88rpx; font-weight:700; color:#111827; letter-spacing:-4rpx;">{{pomodoroDisplay}}</text>
+    <text style="font-size:22rpx; color:#9CA3AF; margin-top:8rpx;">{{pomodoroPhase === 'focus' ? '保持专注' : '好好休息'}}</text>
+  </view>
+
+  <!-- 进度条 -->
+  <view style="width:480rpx; background:#E5E7EB; border-radius:8rpx; height:8rpx; margin-bottom:80rpx; overflow:hidden;">
+    <view style="background:{{pomodoroPhase === 'focus' ? '#2563EB' : '#16A34A'}}; height:100%; width:{{pomodoroProgress * 100}}%; border-radius:8rpx; transition:width 0.5s linear;"></view>
+  </view>
+
+  <!-- 按钮 -->
+  <view class="row" style="gap:32rpx;">
+    <view bindtap="handleAbandonPomodoro" style="background:#F3F4F6; border-radius:20rpx; height:96rpx; padding:0 48rpx; display:flex; align-items:center; justify-content:center;">
+      <text style="font-size:28rpx; color:#6B7280;">放弃</text>
+    </view>
+    <view bindtap="handlePomodoroComplete" style="background:#111827; border-radius:20rpx; height:96rpx; padding:0 48rpx; display:flex; align-items:center; justify-content:center;">
+      <text style="font-size:28rpx; color:#FFF; font-weight:600;">提前完成</text>
+    </view>
+  </view>
+
+</view>
+
+<!-- 情绪收集浮层（全部完成后先弹这个）-->
+<view wx:if="{{showMoodPicker}}" style="position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); display:flex; align-items:flex-end; z-index:1001;">
+  <view style="background:#FFF; border-radius:32rpx 32rpx 0 0; padding:48rpx 40rpx 80rpx; width:100%;">
+    <text style="font-size:32rpx; font-weight:700; color:#111827; display:block; text-align:center; margin-bottom:8rpx;">今天整体感觉怎么样？</text>
+    <text style="font-size:24rpx; color:#6B7280; display:block; text-align:center; margin-bottom:40rpx;">Flow 会用这个数据帮你找到最高效的时机</text>
+    <view class="row" style="gap:16rpx; margin-bottom:32rpx;">
+      <view bindtap="handleMoodSelect" data-mood="great" style="flex:1; background:#F0FDF4; border-radius:20rpx; padding:28rpx 8rpx; text-align:center;">
+        <text style="font-size:48rpx; display:block; margin-bottom:8rpx;">⚡</text>
+        <text style="font-size:22rpx; color:#15803D; font-weight:600;">精力充沛</text>
+      </view>
+      <view bindtap="handleMoodSelect" data-mood="good" style="flex:1; background:#EFF6FF; border-radius:20rpx; padding:28rpx 8rpx; text-align:center;">
+        <text style="font-size:48rpx; display:block; margin-bottom:8rpx;">😊</text>
+        <text style="font-size:22rpx; color:#1D4ED8; font-weight:600;">还不错</text>
+      </view>
+      <view bindtap="handleMoodSelect" data-mood="tired" style="flex:1; background:#FEF3C7; border-radius:20rpx; padding:28rpx 8rpx; text-align:center;">
+        <text style="font-size:48rpx; display:block; margin-bottom:8rpx;">😴</text>
+        <text style="font-size:22rpx; color:#92400E; font-weight:600;">有点疲</text>
+      </view>
+      <view bindtap="handleMoodSelect" data-mood="exhausted" style="flex:1; background:#FEE2E2; border-radius:20rpx; padding:28rpx 8rpx; text-align:center;">
+        <text style="font-size:48rpx; display:block; margin-bottom:8rpx;">😩</text>
+        <text style="font-size:22rpx; color:#991B1B; font-weight:600;">很疲惫</text>
+      </view>
+    </view>
+    <view class="btn-ghost" bindtap="handleSkipMood">跳过</view>
+  </view>
+</view>
+
+<!-- 可用时长选择弹窗（修改时长入口，替代actionSheet）-->
+<view wx:if="{{showCustomHoursModal}}" style="position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); display:flex; align-items:flex-end; z-index:1002;" bindtap="cancelCustomHours">
+  <view style="background:#FFF; border-radius:32rpx 32rpx 0 0; padding:32rpx 32rpx 72rpx; width:100%;" catchtap="noop">
+    <view class="row-between" style="margin-bottom:24rpx;">
+      <text style="font-size:30rpx; font-weight:700; color:#111827;">今天有多少时间？</text>
+      <text bindtap="cancelCustomHours" style="font-size:26rpx; color:#9CA3AF;">取消</text>
+    </view>
+    <!-- 快速选项 -->
+    <view style="display:flex; flex-wrap:wrap; gap:12rpx; margin-bottom:24rpx;">
+      <view wx:for="{{[{l:'0.5h',h:0.5},{l:'1h',h:1},{l:'1.5h',h:1.5},{l:'2h',h:2},{l:'2.5h',h:2.5},{l:'3h',h:3},{l:'4h',h:4},{l:'5h',h:5},{l:'6h',h:6}]}}" wx:key="l"
+        bindtap="quickSelectHours" data-h="{{item.h}}"
+        style="padding:14rpx 28rpx; border-radius:40rpx; background:#F3F4F6; font-size:28rpx; color:#374151;">{{item.l}}</view>
+    </view>
+    <view style="height:1rpx; background:#F3F4F6; margin-bottom:20rpx;"></view>
+    <!-- 滑动选择 -->
+    <picker mode="multiSelector" range="{{hoursPickerRange}}" value="{{hoursPickerValue}}"
+      bindchange="handleHoursPickerChange" style="width:100%; margin-bottom:20rpx;">
+      <view style="background:#F3F4F6; border-radius:16rpx; padding:20rpx 24rpx; text-align:center;">
+        <text style="font-size:36rpx; font-weight:700; color:#2563EB;">
+          {{hoursPickerValue[0]}}小时{{hoursPickerValue[1] > 0 ? [0,15,30,45][hoursPickerValue[1]] + '分' : ''}}
+        </text>
+        <text style="font-size:24rpx; color:#9CA3AF; display:block; margin-top:6rpx;">上下滑动选择 ›</text>
+      </view>
+    </picker>
+    <view class="btn-primary" bindtap="confirmCustomHours">确定</view>
+  </view>
+</view>
+
+<!-- 成就解锁浮层 -->
+<view wx:if="{{showAchievement && currentAchievement}}" style="position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.65); display:flex; align-items:center; justify-content:center; z-index:1000; padding:64rpx;">
+  <view style="background:#FFF; border-radius:32rpx; padding:64rpx 48rpx; width:100%; text-align:center;">
+    <text style="font-size:24rpx; color:#6B7280; display:block; margin-bottom:16rpx; letter-spacing:4rpx;">成就解锁</text>
+    <text style="font-size:96rpx; display:block; margin-bottom:24rpx;">{{currentAchievement.label}}</text>
+    <text style="font-size:32rpx; font-weight:700; color:#111827; display:block; margin-bottom:16rpx;">{{currentAchievement.desc}}</text>
+    <view style="background:#F0FDF4; border-radius:16rpx; padding:24rpx; margin:32rpx 0;">
+      <text style="font-size:26rpx; color:#166534; line-height:40rpx;">一步一步做到的，这些都是真实发生过的事。</text>
+    </view>
+    <view class="btn-primary" bindtap="dismissAchievement">继续</view>
+  </view>
+</view>
+
+<!-- 时间校准收集浮层 -->
+<view wx:if="{{showTimeTracker}}" style="position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.45); display:flex; align-items:flex-end; z-index:998;">
+  <view style="background:#FFF; border-radius:32rpx 32rpx 0 0; padding:40rpx 40rpx 72rpx; width:100%;">
+    <text style="font-size:24rpx; color:#6B7280; display:block; margin-bottom:8rpx;">✓ 完成了</text>
+    <text style="font-size:30rpx; font-weight:600; color:#111827; display:block; margin-bottom:6rpx;">{{trackingTaskTitle}}</text>
+    <text style="font-size:24rpx; color:#6B7280; display:block; margin-bottom:32rpx;">实际花了多久？帮 Flow 校准你的时间习惯</text>
+    <view class="row" style="gap:12rpx; margin-bottom:28rpx;">
+      <view bindtap="handleTimeAccuracy" data-accuracy="less" style="flex:1; background:#F0FDF4; border-radius:16rpx; padding:20rpx 8rpx; text-align:center;">
+        <text style="font-size:32rpx; display:block; margin-bottom:6rpx;">⚡</text>
+        <text style="font-size:22rpx; color:#166534; font-weight:600; display:block;">比预估少</text>
+      </view>
+      <view bindtap="handleTimeAccuracy" data-accuracy="same" style="flex:1; background:#EFF6FF; border-radius:16rpx; padding:20rpx 8rpx; text-align:center;">
+        <text style="font-size:32rpx; display:block; margin-bottom:6rpx;">✅</text>
+        <text style="font-size:22rpx; color:#1D4ED8; font-weight:600; display:block;">差不多</text>
+      </view>
+      <view bindtap="handleTimeAccuracy" data-accuracy="more" style="flex:1; background:#FEF3C7; border-radius:16rpx; padding:20rpx 8rpx; text-align:center;">
+        <text style="font-size:32rpx; display:block; margin-bottom:6rpx;">⏰</text>
+        <text style="font-size:22rpx; color:#92400E; font-weight:600; display:block;">多了一些</text>
+      </view>
+      <view bindtap="handleTimeAccuracy" data-accuracy="much_more" style="flex:1; background:#FEE2E2; border-radius:16rpx; padding:20rpx 8rpx; text-align:center;">
+        <text style="font-size:32rpx; display:block; margin-bottom:6rpx;">😅</text>
+        <text style="font-size:22rpx; color:#991B1B; font-weight:600; display:block;">超了很多</text>
+      </view>
+    </view>
+    <view class="btn-ghost" bindtap="handleSkipTimeTracker">跳过</view>
+  </view>
+</view>
+
+<!-- 隐藏 canvas 用于生成分享图 -->
+<canvas canvas-id="shareCanvas" style="position:fixed; left:-9999rpx; top:0; width:600rpx; height:880rpx;"></canvas>
+
+<!-- 全部完成浮层 -->
+<view wx:if="{{showCompletion}}" style="position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(255,255,255,0.97); display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:999; padding:64rpx;">
+  <text style="font-size:96rpx; margin-bottom:32rpx;">🎯</text>
+  <text style="font-size:44rpx; font-weight:700; color:#111827; margin-bottom:16rpx;">今天，你赢了。</text>
+  <text style="font-size:28rpx; color:#6B7280; margin-bottom:8rpx;">完成 {{completedCount}} 件 · 共 {{totalMinutes}} 分钟</text>
+  <text style="font-size:30rpx; color:#F97316; margin-bottom:32rpx;">🔥 连续高效 {{streak}} 天</text>
+  <view style="background:#F0FDF4; border-radius:16rpx; padding:28rpx 32rpx; margin-bottom:32rpx; width:100%;">
+    <text style="font-size:28rpx; color:#166534; line-height:44rpx;">{{completionMessage}}</text>
+  </view>
+  <!-- 今日截止未完成任务提醒 -->
+  <view wx:if="{{unplannedUrgentTasks.length > 0}}" style="background:#FEF3C7; border-radius:16rpx; padding:20rpx 28rpx; margin-bottom:20rpx; width:100%; box-sizing:border-box;">
+    <view class="row">
+      <text style="font-size:28rpx; margin-right:10rpx;">⚠️</text>
+      <view>
+        <text style="font-size:26rpx; font-weight:700; color:#92400E; display:block;">今天还有 {{unplannedUrgentTasks.length}} 个截止任务未安排</text>
+        <text style="font-size:22rpx; color:#B45309; display:block; margin-top:4rpx;">{{unplannedUrgentTasks[0].title}}{{unplannedUrgentTasks.length > 1 ? ' 等' : ''}}</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="btn-primary" style="width:100%; margin-bottom:16rpx;" bindtap="handleRequestNextPush">授权明天早 8 点的计划推送</view>
+  <!-- 分享今天成绩 -->
+  <button open-type="share" style="width:100%; background:#F8FAFF; border:2rpx solid #BFDBFE; border-radius:20rpx; height:88rpx; display:flex; align-items:center; justify-content:center; margin-bottom:16rpx; font-size:28rpx; color:#2563EB; box-sizing:border-box;">
+    📤 分享今天的成绩
+  </button>
+  <!-- 好友挑战裂变 -->
+  <button open-type="share" style="width:100%; background:#FFF7ED; border:2rpx solid #FED7AA; border-radius:20rpx; height:88rpx; display:flex; align-items:center; justify-content:center; margin-bottom:16rpx; font-size:28rpx; color:#C2410C; box-sizing:border-box;">
+    🏆 挑战朋友加入本月挑战
+  </button>
+  <view class="btn-ghost" bindtap="dismissCompletion">先不用了</view>
+</view>
+
+<!-- 免死金牌浮层 -->
+<view wx:if="{{showJoker}}" style="position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.6); display:flex; align-items:flex-end; z-index:999;">
+  <view style="background:#FFF; border-radius:32rpx 32rpx 0 0; padding:48rpx 40rpx 80rpx; width:100%;">
+    <text style="font-size:80rpx; display:block; text-align:center; margin-bottom:24rpx;">🃏</text>
+    <text style="font-size:36rpx; font-weight:700; color:#111827; display:block; text-align:center; margin-bottom:16rpx;">昨天断了</text>
+    <text style="font-size:28rpx; color:#6B7280; display:block; text-align:center; line-height:44rpx; margin-bottom:48rpx;">{{streak}} 天的 Streak 中断了。还有 {{jokerCount}} 张免死金牌，用掉一张可以保住它。</text>
+    <view class="btn-primary" style="margin-bottom:20rpx;" bindtap="handleUseJoker">使用免死金牌，保住 {{streak}} 天</view>
+    <view class="btn-ghost" bindtap="handleJokerSkip">没关系，从今天重新开始</view>
+  </view>
+</view>
+
+<!-- 周五预载浮层 -->
+<view wx:if="{{showFridayPlanning}}" style="position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); display:flex; align-items:flex-end; z-index:998;">
+  <view style="background:#FFF; border-radius:32rpx 32rpx 0 0; padding:48rpx 40rpx 80rpx; width:100%;">
+    <text style="font-size:40rpx; display:block; text-align:center; margin-bottom:16rpx;">📋</text>
+    <text style="font-size:32rpx; font-weight:700; color:#111827; display:block; text-align:center; margin-bottom:8rpx;">一周结束了</text>
+    <text style="font-size:26rpx; color:#6B7280; display:block; text-align:center; line-height:40rpx; margin-bottom:32rpx;">告诉 Flow 下周最重要的事，周一会优先安排</text>
+
+    <view wx:if="{{!fridayNoteSaved}}">
+      <textarea
+        style="width:100%; min-height:160rpx; font-size:30rpx; color:#111827; line-height:48rpx; background:#F9FAFB; border-radius:16rpx; padding:24rpx; box-sizing:border-box; margin-bottom:24rpx;"
+        placeholder="例：完成期末报告、准备面试、和朋友吃饭..."
+        placeholder-style="color:#D1D5DB;"
+        bindinput="handleFridayNoteInput"
+        value="{{fridayNote}}"
+      />
+      <view class="btn-primary" style="margin-bottom:20rpx;" bindtap="handleSaveFridayNote">告诉 Flow</view>
+      <view class="btn-ghost" bindtap="handleSkipFridayPlanning">下周再说</view>
+    </view>
+
+    <view wx:else style="text-align:center; padding:32rpx 0;">
+      <text style="font-size:40rpx; display:block; margin-bottom:16rpx;">✓</text>
+      <text style="font-size:28rpx; color:#16A34A;">周一 Flow 会记得</text>
+    </view>
+  </view>
+</view>
+
+<!-- 失败原因标签浮层 -->
+<view wx:if="{{showFailureTag && currentFailureTask}}" style="position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); display:flex; align-items:flex-end; z-index:999;">
+  <view style="background:#FFF; border-radius:32rpx 32rpx 0 0; padding:48rpx 40rpx 80rpx; width:100%;">
+    <text style="font-size:26rpx; color:#6B7280; display:block; margin-bottom:8rpx;">昨天没做完</text>
+    <text style="font-size:32rpx; font-weight:700; color:#111827; display:block; margin-bottom:8rpx;">{{currentFailureTask.task_title}}</text>
+    <text style="font-size:26rpx; color:#6B7280; display:block; margin-bottom:40rpx;">标一下原因，Flow 下次安排会调整</text>
+    <view class="row" style="gap:16rpx; margin-bottom:32rpx;">
+      <view bindtap="handleFailureTag" data-reason="too_hard" style="flex:1; background:#FEF3C7; border-radius:16rpx; padding:24rpx; text-align:center;">
+        <text style="font-size:40rpx; display:block; margin-bottom:8rpx;">😓</text>
+        <text style="font-size:26rpx; color:#92400E; font-weight:600;">太难了</text>
+      </view>
+      <view bindtap="handleFailureTag" data-reason="no_time" style="flex:1; background:#DBEAFE; border-radius:16rpx; padding:24rpx; text-align:center;">
+        <text style="font-size:40rpx; display:block; margin-bottom:8rpx;">⏰</text>
+        <text style="font-size:26rpx; color:#1E40AF; font-weight:600;">没时间</text>
+      </view>
+      <view bindtap="handleFailureTag" data-reason="dont_want" style="flex:1; background:#F3E8FF; border-radius:16rpx; padding:24rpx; text-align:center;">
+        <text style="font-size:40rpx; display:block; margin-bottom:8rpx;">😶</text>
+        <text style="font-size:26rpx; color:#6B21A8; font-weight:600;">不想做</text>
+      </view>
+    </view>
+    <view wx:if="{{failureTagQueue.length > 1}}" style="text-align:center; font-size:22rpx; color:#9CA3AF; margin-bottom:16rpx;">还有 {{failureTagQueue.length - 1}} 件待标记</view>
+    <view class="btn-ghost" bindtap="handleSkipFailureTag">跳过</view>
+  </view>
+</view>

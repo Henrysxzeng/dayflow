@@ -1,0 +1,196 @@
+<view class="page-container">
+
+  <!-- 我的名片 -->
+  <view class="card" style="margin-top:24rpx; margin-bottom:24rpx;">
+    <view class="row-between">
+      <view class="row">
+        <view bindtap="openEditProfile" style="width:88rpx; height:88rpx; border-radius:44rpx; background:#EFF6FF; display:flex; align-items:center; justify-content:center; margin-right:24rpx; position:relative;">
+          <text style="font-size:48rpx;">{{myAvatar}}</text>
+          <text style="position:absolute; bottom:-4rpx; right:-4rpx; font-size:22rpx; background:#2563EB; color:#FFF; border-radius:12rpx; padding:2rpx 6rpx;">编辑</text>
+        </view>
+        <view>
+          <text style="font-size:30rpx; font-weight:700; color:#111827; display:block;">{{myDisplayName}}</text>
+          <text style="font-size:24rpx; color:#6B7280; display:block; margin-top:4rpx;">好友码：{{myFriendCode}}</text>
+        </view>
+      </view>
+      <view>
+        <view bindtap="copyFriendCode" style="background:#EFF6FF; border-radius:12rpx; padding:10rpx 20rpx; margin-bottom:8rpx; text-align:center;">
+          <text style="font-size:22rpx; color:#2563EB;">复制码</text>
+        </view>
+        <button open-type="share" style="background:#F0FDF4; border-radius:12rpx; padding:10rpx 20rpx; font-size:22rpx; color:#16A34A; text-align:center; box-sizing:border-box;">分享</button>
+      </view>
+    </view>
+  </view>
+
+  <!-- Tab -->
+  <view class="row" style="background:#FFF; border-radius:20rpx; padding:8rpx; margin-bottom:24rpx; box-shadow:0 1rpx 4rpx rgba(0,0,0,0.06);">
+    <view bindtap="switchTab" data-tab="friends" style="flex:1; text-align:center; padding:14rpx 0; border-radius:14rpx; background:{{activeTab === 'friends' ? '#2563EB' : 'transparent'}};">
+      <text style="font-size:26rpx; color:{{activeTab === 'friends' ? '#FFF' : '#6B7280'}}; font-weight:{{activeTab === 'friends' ? '600' : '400'}};">好友 {{friends.length}}</text>
+    </view>
+    <view bindtap="switchTab" data-tab="invites" style="flex:1; text-align:center; padding:14rpx 0; border-radius:14rpx; background:{{activeTab === 'invites' ? '#2563EB' : 'transparent'}};">
+      <text style="font-size:26rpx; color:{{activeTab === 'invites' ? '#FFF' : '#6B7280'}}; font-weight:{{activeTab === 'invites' ? '600' : '400'}};">邀请 {{pendingInvites.length}}</text>
+    </view>
+    <view bindtap="switchTab" data-tab="history" style="flex:1; text-align:center; padding:14rpx 0; border-radius:14rpx; background:{{activeTab === 'history' ? '#2563EB' : 'transparent'}};">
+      <text style="font-size:26rpx; color:{{activeTab === 'history' ? '#FFF' : '#6B7280'}}; font-weight:{{activeTab === 'history' ? '600' : '400'}};">历史</text>
+    </view>
+  </view>
+
+  <!-- 好友列表 -->
+  <block wx:if="{{activeTab === 'friends'}}">
+    <view wx:if="{{friends.length === 0}}" style="text-align:center; padding:80rpx 0; color:#9CA3AF; font-size:28rpx;">
+      <text style="font-size:80rpx; display:block; margin-bottom:20rpx;">👋</text>
+      <text style="display:block; margin-bottom:12rpx;">还没有好友</text>
+      <text style="font-size:24rpx; display:block;">把你的好友码发给朋友，或者输入对方的码</text>
+    </view>
+    <view wx:for="{{friends}}" wx:key="user_id" class="card" style="margin-bottom:16rpx; padding:24rpx 28rpx;">
+      <view class="row-between">
+        <view class="row">
+          <text style="font-size:56rpx; margin-right:20rpx;">{{item.avatar_emoji}}</text>
+          <view>
+            <text style="font-size:30rpx; font-weight:600; color:#111827; display:block;">{{item.display_name}}</text>
+            <view style="margin-top:8rpx;">
+              <view class="row">
+                <text style="font-size:26rpx; margin-right:8rpx;">{{item.level.emoji}}</text>
+                <text style="font-size:26rpx; color:{{item.level.color}}; font-weight:700;">{{item.level.label}}</text>
+              </view>
+              <text style="font-size:20rpx; color:#9CA3AF; margin-top:4rpx; display:block;">{{item.level.sublabel}}</text>
+            </view>
+          </view>
+        </view>
+        <view style="text-align:right;">
+          <text style="font-size:22rpx; color:#6B7280; display:block;">共同完成</text>
+          <text style="font-size:32rpx; font-weight:700; color:#2563EB;">{{item.shared_tasks_completed}}</text>
+          <text style="font-size:22rpx; color:#6B7280; display:block;">件</text>
+        </view>
+      </view>
+      <!-- 双人Streak -->
+      <view wx:if="{{item.pair_streak && item.pair_streak.current > 0}}" style="background:#FFF7ED; border-radius:12rpx; padding:12rpx 20rpx; margin-top:12rpx; display:flex; align-items:center;">
+        <text style="font-size:26rpx; margin-right:8rpx;">🔥</text>
+        <text style="font-size:24rpx; color:#C2410C; font-weight:600;">你们已连续 {{item.pair_streak.current}} 天一起完成</text>
+        <text wx:if="{{item.pair_streak.longest > item.pair_streak.current}}" style="font-size:20rpx; color:#9CA3AF; margin-left:8rpx;">最高 {{item.pair_streak.longest}} 天</text>
+      </view>
+      <!-- 默契度进度条 -->
+      <view style="margin-top:16rpx;">
+        <view style="background:#F3F4F6; border-radius:8rpx; height:8rpx; overflow:hidden;">
+          <view style="background:{{item.level.color}}; height:100%; width:{{item.chemistry >= 100 ? 100 : item.chemistry}}%; border-radius:8rpx;"></view>
+        </view>
+        <view class="row-between" style="margin-top:8rpx;">
+          <text style="font-size:20rpx; color:#9CA3AF; font-weight:600; color:{{item.level.color}};">{{item.chemistry}} 默契值</text>
+          <text style="font-size:18rpx; color:#9CA3AF;">
+            {{item.chemistry < 10 ? '再' + (10-item.chemistry) + '件 → 志趣相投🔥' :
+              (item.chemistry < 30 ? '再' + (30-item.chemistry) + '件 → 灵犀暗通✨' :
+              (item.chemistry < 60 ? '再' + (60-item.chemistry) + '件 → 默契十足💎' :
+              (item.chemistry < 100 ? '再' + (100-item.chemistry) + '件 → 心流共振🌊' : '已达满级 ✦')))}}
+          </text>
+        </view>
+      </view>
+    </view>
+  </block>
+
+  <!-- 待接受邀请 -->
+  <block wx:if="{{activeTab === 'invites'}}">
+    <view wx:if="{{pendingInvites.length === 0}}" style="text-align:center; padding:80rpx 0; color:#9CA3AF; font-size:28rpx;">
+      <text style="font-size:80rpx; display:block; margin-bottom:20rpx;">📋</text>
+      <text>暂无待接受的任务邀请</text>
+    </view>
+    <view wx:for="{{pendingInvites}}" wx:key="_id" class="card" style="margin-bottom:16rpx;">
+      <text style="font-size:24rpx; color:#6B7280; display:block; margin-bottom:8rpx;">好友邀请你一起完成</text>
+      <text style="font-size:30rpx; font-weight:700; color:#111827; display:block; margin-bottom:16rpx;">{{item.task_title}}</text>
+      <view class="row">
+        <text style="font-size:24rpx; color:#6B7280; flex:1;">预计 {{item.estimated_minutes}} 分钟</text>
+        <view class="btn-primary" style="height:64rpx; padding:0 32rpx; font-size:26rpx;" bindtap="acceptInvite" data-id="{{item._id}}">接受任务</view>
+      </view>
+    </view>
+  </block>
+
+  <!-- 共同任务历史 -->
+  <block wx:if="{{activeTab === 'history'}}">
+    <view wx:if="{{sharedHistory.length === 0}}" style="text-align:center; padding:80rpx 0; color:#9CA3AF; font-size:28rpx;">
+      <text style="font-size:80rpx; display:block; margin-bottom:20rpx;">🤝</text>
+      <text>还没有共同完成的任务</text>
+    </view>
+    <view wx:for="{{sharedHistory}}" wx:key="_id" class="card" style="margin-bottom:16rpx; padding:24rpx 28rpx;">
+      <view class="row-between" style="margin-bottom:12rpx;">
+        <text style="font-size:28rpx; font-weight:600; color:#111827; flex:1;">{{item.task_title}}</text>
+        <text wx:if="{{item.status === 'both_done'}}" style="font-size:22rpx; color:#16A34A; background:#F0FDF4; padding:4rpx 14rpx; border-radius:20rpx;">✓ 双方完成 +2默契</text>
+        <text wx:else style="font-size:22rpx; color:#9CA3AF; background:#F9FAFB; padding:4rpx 14rpx; border-radius:20rpx;">进行中</text>
+      </view>
+      <view class="row">
+        <text style="font-size:24rpx; margin-right:12rpx;">{{item.partner_emoji}}</text>
+        <text style="font-size:24rpx; color:#6B7280;">与 {{item.partner_name}} · </text>
+        <text style="font-size:24rpx; color:#6B7280;">我{{item.my_completed ? '✓' : '○'}} 对方{{item.partner_completed ? '✓' : '○'}}</text>
+      </view>
+    </view>
+  </block>
+
+</view>
+
+<!-- 添加好友浮层 -->
+<view wx:if="{{showAddFriend}}" style="position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); display:flex; align-items:flex-end; z-index:999;">
+  <view style="background:#FFF; border-radius:32rpx 32rpx 0 0; padding:32rpx 32rpx 56rpx; width:100%;">
+    <view class="row-between" style="margin-bottom:20rpx;">
+      <text style="font-size:32rpx; font-weight:700; color:#111827;">添加好友</text>
+      <text bindtap="closeAddFriend" style="font-size:26rpx; color:#9CA3AF; padding:8rpx;">取消</text>
+    </view>
+    <text style="font-size:24rpx; color:#6B7280; display:block; margin-bottom:20rpx;">输入对方的好友码（在对方"好友"页面可看到）</text>
+    <input
+      type="text"
+      placeholder="例：FCAB34"
+      placeholder-style="color:#D1D5DB; font-size:30rpx; letter-spacing:4rpx; text-align:center;"
+      bindinput="handleCodeInput"
+      value="{{inputCode}}"
+      style="height:88rpx; background:#F3F4F6; border-radius:16rpx; padding:0 24rpx; font-size:32rpx; color:#111827; text-align:center; letter-spacing:6rpx; width:100%; box-sizing:border-box; margin-bottom:20rpx; font-weight:700;"
+      maxlength="6"
+    />
+    <view class="btn-primary" bindtap="handleAddFriend">添加好友</view>
+  </view>
+</view>
+
+<!-- 编辑名片浮层 -->
+<view wx:if="{{showEditProfile}}" style="position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); display:flex; align-items:flex-end; z-index:999;">
+  <view style="background:#FFF; border-radius:32rpx 32rpx 0 0; padding:32rpx 32rpx 56rpx; width:100%;">
+    <view class="row-between" style="margin-bottom:24rpx;">
+      <text style="font-size:32rpx; font-weight:700; color:#111827;">编辑名片</text>
+      <text bindtap="closeEditProfile" style="font-size:26rpx; color:#9CA3AF; padding:8rpx;">取消</text>
+    </view>
+    <!-- 头像 + 输入框横排 -->
+    <view class="row" style="margin-bottom:24rpx;">
+      <view bindtap="openAvatarPicker" style="width:96rpx; height:96rpx; border-radius:48rpx; background:#EFF6FF; display:flex; align-items:center; justify-content:center; margin-right:24rpx; flex-shrink:0; position:relative;">
+        <text style="font-size:52rpx;">{{editAvatar}}</text>
+        <text style="position:absolute; bottom:-2rpx; right:-2rpx; font-size:20rpx; background:#2563EB; color:#FFF; border-radius:10rpx; padding:2rpx 8rpx;">换</text>
+      </view>
+      <view class="flex-1">
+        <text style="font-size:24rpx; color:#6B7280; display:block; margin-bottom:8rpx;">昵称（最多12字）</text>
+        <input
+          type="text"
+          placeholder="怎么称呼你？"
+          placeholder-style="color:#D1D5DB; font-size:28rpx;"
+          bindinput="handleNameInput"
+          value="{{editName}}"
+          style="height:80rpx; background:#F3F4F6; border-radius:14rpx; padding:0 20rpx; font-size:30rpx; color:#111827; width:100%; box-sizing:border-box;"
+          maxlength="12"
+        />
+      </view>
+    </view>
+    <view class="btn-primary" bindtap="saveProfile">保存</view>
+  </view>
+</view>
+
+<!-- 头像选择器 -->
+<view wx:if="{{showAvatarPicker}}" style="position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; z-index:1000; padding:64rpx;">
+  <view style="background:#FFF; border-radius:24rpx; padding:32rpx; width:100%;">
+    <text style="font-size:28rpx; font-weight:600; color:#111827; display:block; text-align:center; margin-bottom:24rpx;">选择头像</text>
+    <view style="display:flex; flex-wrap:wrap; justify-content:center; gap:20rpx;">
+      <view wx:for="{{avatarOptions}}" wx:key="*this" bindtap="selectAvatar" data-emoji="{{item}}" style="width:100rpx; height:100rpx; border-radius:50rpx; background:{{editAvatar === item ? '#EFF6FF' : '#F9FAFB'}}; border:{{editAvatar === item ? '4rpx solid #2563EB' : '4rpx solid transparent'}}; display:flex; align-items:center; justify-content:center;">
+        <text style="font-size:52rpx;">{{item}}</text>
+      </view>
+    </view>
+  </view>
+</view>
+
+<!-- 底部添加好友按钮 -->
+<view style="position:fixed; bottom:120rpx; right:32rpx;">
+  <view bindtap="openAddFriend" style="width:112rpx; height:112rpx; border-radius:56rpx; background:#2563EB; display:flex; align-items:center; justify-content:center; box-shadow:0 8rpx 24rpx rgba(37,99,235,0.4);">
+    <text style="color:#FFF; font-size:52rpx; line-height:1; margin-top:-4rpx;">+</text>
+  </view>
+</view>

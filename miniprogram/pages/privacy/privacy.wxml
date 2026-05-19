@@ -1,0 +1,47 @@
+<scroll-view scroll-y style="height:100vh; padding:32rpx; box-sizing:border-box;">
+  <view style="font-size:36rpx; font-weight:700; color:#111827; margin-bottom:32rpx;">FlowCast 隐私政策</view>
+  <view style="font-size:24rpx; color:#6B7280; margin-bottom:48rpx;">更新日期：2026年5月</view>
+
+  <view style="font-size:26rpx; color:#374151; line-height:44rpx; margin-bottom:32rpx;">
+    FlowCast（以下简称"我们"）非常重视您的隐私保护。本隐私政策说明我们如何收集、使用和保护您的个人信息。使用本小程序即表示您同意本政策。
+  </view>
+
+  <view style="font-size:30rpx; font-weight:600; color:#111827; margin-bottom:16rpx;">一、我们收集的信息</view>
+  <view style="font-size:26rpx; color:#374151; line-height:44rpx; margin-bottom:32rpx;">
+    1. 微信授权信息：您登录时，我们获取您的微信 OpenID 作为账户标识，不获取您的微信头像、昵称等信息（除非您主动授权）。\n
+    2. 任务信息：您主动填写的任务名称、截止日期、预计用时、重要程度等内容。\n
+    3. 使用行为数据：任务完成记录、每日计划、Streak 天数、完成率等，用于提供个性化服务。\n
+    4. 设备信息：小程序运行所需的基本设备和网络环境信息。
+  </view>
+
+  <view style="font-size:30rpx; font-weight:600; color:#111827; margin-bottom:16rpx;">二、信息的使用目的</view>
+  <view style="font-size:26rpx; color:#374151; line-height:44rpx; margin-bottom:32rpx;">
+    1. 提供 AI 任务规划服务：您的任务信息会发送至 DeepSeek AI 服务生成每日计划，DeepSeek 不会留存您的任务数据。\n
+    2. 个性化推送：通过微信订阅消息向您发送晨间计划提醒、每周总结等通知。\n
+    3. 服务优化：分析汇总的使用数据（不包含个人身份信息）以改善产品体验。
+  </view>
+
+  <view style="font-size:30rpx; font-weight:600; color:#111827; margin-bottom:16rpx;">三、信息存储与安全</view>
+  <view style="font-size:26rpx; color:#374151; line-height:44rpx; margin-bottom:32rpx;">
+    您的数据存储于腾讯云开发（CloudBase）平台，部署在中国大陆境内，符合《数据安全法》《个人信息保护法》的相关要求。我们采用加密传输和访问控制保护您的数据。
+  </view>
+
+  <view style="font-size:30rpx; font-weight:600; color:#111827; margin-bottom:16rpx;">四、第三方服务</view>
+  <view style="font-size:26rpx; color:#374151; line-height:44rpx; margin-bottom:32rpx;">
+    本小程序使用以下第三方服务：\n
+    · 微信开放平台（登录、消息推送）：受微信隐私政策约束\n
+    · DeepSeek AI（任务分析）：仅传输任务文本，不传输个人身份信息
+  </view>
+
+  <view style="font-size:30rpx; font-weight:600; color:#111827; margin-bottom:16rpx;">五、您的权利</view>
+  <view style="font-size:26rpx; color:#374151; line-height:44rpx; margin-bottom:32rpx;">
+    1. 查看数据：您可在"任务清单"页面查看所有个人数据。\n
+    2. 删除数据：如需删除账户及全部数据，请通过下方联系方式申请，我们将在 7 个工作日内处理。\n
+    3. 撤回授权：您可随时在微信设置中撤回对本小程序的授权。
+  </view>
+
+  <view style="font-size:30rpx; font-weight:600; color:#111827; margin-bottom:16rpx;">六、联系我们</view>
+  <view style="font-size:26rpx; color:#374151; line-height:44rpx; margin-bottom:64rpx;">
+    如有任何隐私相关问题，请通过小程序"我的"页面中的反馈渠道联系我们。
+  </view>
+</scroll-view>
