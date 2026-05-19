@@ -141,6 +141,7 @@ Page({
   },
 
   onShow() {
+    this._maybeRequestSubscription()
     if (this.data.showPomodoro && this.data.pomodoroStartTime > 0) {
       this._startPomodoroTick()
     }
@@ -169,8 +170,8 @@ Page({
         wx.showModal({
           title: '已添加"' + task.title + '"',
           content: '要加入今日计划吗？',
-          confirmText: 'AI重新规划',
-          cancelText: '加到末尾',
+          confirmText: 'AI规划',
+          cancelText: '加末尾',
           success: function(res) {
             var hours = parseFloat(self.data.availableHours) || 4
             if (res.confirm) {
@@ -193,7 +194,11 @@ Page({
       this.handleStartPomodoro({ currentTarget: { dataset: { id: pending.id, title: pending.title } } })
       return
     }
-    if (this.data.planReady || this.data.waitingForSchedule) return
+    if (this.data.waitingForSchedule) return
+    if (this.data.planReady) {
+      this._refreshPlanSilently()
+      return
+    }
     this.setData({ showOnboarding: false, showRestDay: false })
     this.initPage()
   },
@@ -298,15 +303,20 @@ Page({
   },
 
   applyPlan(plan) {
-    const mainTasks = (plan.selected_task_ids_data || []).map(t => ({
-      ...t,
-      durationDisplay: minutesToDisplay(t.suggested_minutes || t.estimated_minutes),
-      timeDisplay: t.suggested_start_time && t.suggested_end_time
-        ? `${t.suggested_start_time} - ${t.suggested_end_time}`
-        : '',
-      note: t.ai_note || '',
-      completed: t.status === 'completed'
-    }))
+    const mainTasks = (plan.selected_task_ids_data || []).map(t => {
+      const spent = t.time_spent_minutes || 0
+      const remaining = Math.max(0, (t.estimated_minutes || 30) - spent)
+      return {
+        ...t,
+        durationDisplay: minutesToDisplay(t.suggested_minutes || t.estimated_minutes),
+        timeDisplay: t.suggested_start_time && t.suggested_end_time
+          ? `${t.suggested_start_time} - ${t.suggested_end_time}`
+          : '',
+        note: t.ai_note || '',
+        completed: t.status === 'completed',
+        remainingPomodoros: Math.ceil(remaining / 25)
+      }
+    })
 
     const fragmentTasks = (plan.fragment_task_ids_data || []).map(t => ({
       ...t,
@@ -362,7 +372,7 @@ Page({
       mainTasks, fragmentTasks, scheduleItems, hasSchedule,
       aiSummary: plan.plan_text || '', totalMinutes, bufferMinutes,
       availableHours: plan.available_hours, todayPlanId: plan._id,
-      scheduleConstraints: plan.schedule_constraints || '',
+      scheduleConstraints: (plan.schedule_constraints || '').replace(/\n?(?:已有任务时段[（(]请勿占用[）)]|已有任务时段|以下时段已排定任务)[：:][\s\S]*$/, '').trim(),
       showRestDay: false, showOnboarding: false, waitingForSchedule: false,
       allTasksDone, allDoneQuote, almostThere,
       hardestTaskId: hardestTask ? hardestTask._id : null,
@@ -394,6 +404,15 @@ Page({
     return Object.keys(map).map(function(k) { return map[k] })
   },
 
+  _addToCompletedHistory(taskId) {
+    const task = this.data.mainTasks.find(function(t) { return t._id === taskId })
+    if (!task || !task.completed) return
+    const history = (this.data.completedTasksHistory || []).slice()
+    if (history.find(function(h) { return h._id === taskId })) return
+    history.push(task)
+    this.setData({ completedTasksHistory: history })
+  },
+
   _getCurrentTime() {
     const now = new Date()
     const h = now.getHours()
@@ -414,10 +433,21 @@ Page({
     }).catch(function() {})
   },
 
+  async _refreshPlanSilently() {
+    try {
+      const planResult = await callCloud('getTodayPlan', { date: todayString() })
+      if (planResult && planResult.plan) {
+        this.applyPlan(planResult.plan)
+      }
+    } catch (e) {
+      console.error('_refreshPlanSilently error', e)
+    }
+  },
+
   buildScheduleItems(tasks, busySlots) {
     const items = [
       ...tasks.map(t => ({ ...t, itemType: 'task' })),
-      ...busySlots.map(s => ({ itemType: 'busy', title: s.label, start: s.start, end: s.end, timeDisplay: `${s.start} - ${s.end}` }))
+      ...(busySlots || []).map(s => ({ itemType: 'busy', title: s.label, start: s.start, end: s.end, timeDisplay: s.start + ' - ' + s.end }))
     ]
     items.sort((a, b) => {
       const timeA = a.itemType === 'task' ? (a.suggested_start_time || '99:99') : a.start
@@ -444,22 +474,22 @@ Page({
   },
 
   handleGenerateWithSchedule() {
-    const { selectedHoursTemp, scheduleInput } = this.data
-    this.setData({ waitingForSchedule: false })
-    this.generatePlan(selectedHoursTemp, scheduleInput)
+    const hours = this.data.selectedHoursTemp || parseFloat(this.data.availableHours) || 4
+    const { scheduleInput } = this.data
+    this.setData({ waitingForSchedule: false, scheduleConstraints: scheduleInput })
+    this.generatePlan(hours, scheduleInput)
   },
 
   handleSkipSchedule() {
-    const { selectedHoursTemp } = this.data
     this.setData({ waitingForSchedule: false, scheduleInput: '' })
-    this.generatePlan(selectedHoursTemp, '')
   },
 
-  async generatePlan(hours, scheduleConstraints, retryCount, alreadyCompletedMinutes, currentTime) {
+  async generatePlan(hours, scheduleConstraints, retryCount, alreadyCompletedMinutes, currentTime, existingTaskSlots) {
     if (scheduleConstraints === undefined) scheduleConstraints = ''
     if (retryCount === undefined) retryCount = 0
     if (alreadyCompletedMinutes === undefined) alreadyCompletedMinutes = 0
     if (currentTime === undefined) currentTime = null
+    if (existingTaskSlots === undefined) existingTaskSlots = []
     this.setData({ generating: true })
     wx.showLoading({ title: 'Flow 规划中...', mask: true })
     try {
@@ -468,7 +498,8 @@ Page({
         date: todayString(),
         scheduleConstraints,
         currentTime: currentTime || this._getCurrentTime(),
-        alreadyCompletedMinutes
+        alreadyCompletedMinutes,
+        existingTaskSlots
       })
       wx.hideLoading()
       if (result && result.plan) {
@@ -577,30 +608,35 @@ Page({
 
   _appendTaskToTodayPlan(taskId) {
     const self = this
-    if (!taskId) { wx.showToast({ title: '任务ID丢失，请手动重新生成', icon: 'none' }); return }
+    if (!taskId) { wx.showToast({ title: '任务ID丢失', icon: 'none' }); return }
     wx.showLoading({ title: '加入中...', mask: true })
     callCloud('appendToTodayPlan', { taskId: taskId, planId: self.data.todayPlanId || null }).then(function(res) {
       wx.hideLoading()
       if (res.success && res.task) {
         const t = res.task
+        const startTime = res.suggested_start_time || ''
+        const endTime = res.suggested_end_time || ''
+        const timeDisplay = startTime && endTime ? startTime + ' - ' + endTime : ''
         const newEntry = {
           _id: taskId,
           title: t.title,
           estimated_minutes: t.estimated_minutes,
           suggested_minutes: t.estimated_minutes,
+          suggested_start_time: startTime,
+          suggested_end_time: endTime,
           durationDisplay: minutesToDisplay(t.estimated_minutes),
-          timeDisplay: '',
+          timeDisplay: timeDisplay,
           ai_note: '',
           note: '',
           completed: false,
           isHardest: false,
           itemType: 'task'
         }
-        const mainTasks = self.data.mainTasks.concat([newEntry])
-        const scheduleItems = self.data.scheduleItems.concat([newEntry])
+        const mainTasks = (self.data.mainTasks || []).concat([newEntry])
+        const scheduleItems = (self.data.scheduleItems || []).concat([newEntry])
         const total = mainTasks.reduce(function(s, x) { return s + (x.suggested_minutes || x.estimated_minutes || 0) }, 0)
         self.setData({ mainTasks: mainTasks, scheduleItems: scheduleItems, totalMinutes: total, planReady: true })
-        wx.showToast({ title: '已加到今日末尾', icon: 'success' })
+        wx.showToast({ title: '已加到末尾', icon: 'success' })
       }
     }).catch(function() {
       wx.hideLoading()
@@ -618,27 +654,14 @@ Page({
     }
   },
 
-  // 底部"↺ 重新生成计划"按钮：弹两种模式选择
+  // 底部"↺ 重新生成计划"按钮：直接完全重排
   handleRegenerateSame() {
     const self = this
     const completedTasks = self.data.mainTasks.filter(function(t) { return t.completed })
     const completedMinutes = completedTasks.reduce(function(s, t) { return s + (t.suggested_minutes || t.estimated_minutes || 0) }, 0)
     const currentTime = self._getCurrentTime()
     const hours = parseFloat(self.data.availableHours) || 4
-    const remaining = Math.max(0.5, hours - completedMinutes / 60)
-    wx.showModal({
-      title: '重新规划',
-      content: '现在 ' + currentTime + '，剩余约 ' + Math.round(remaining * 10) / 10 + ' 小时',
-      confirmText: '完全重排',
-      cancelText: '插入空档',
-      success: function(res) {
-        if (res.confirm) {
-          self.generatePlan(hours, self.data.scheduleConstraints, 0, completedMinutes, currentTime)
-        } else {
-          self._smartInsertUnplanned(completedMinutes, currentTime)
-        }
-      }
-    })
+    self.generatePlan(hours, self.data.scheduleConstraints, 0, completedMinutes, currentTime)
   },
 
   // 黄色横幅"重新规划"按钮：直接完全重排，不弹选择框
@@ -653,17 +676,11 @@ Page({
 
   _smartInsertUnplanned(completedMinutes, currentTime) {
     const self = this
-    // 找出未规划的今日截止任务，只对它们重排（保留已有时段作为busy_slots）
     const existingSlots = self.data.scheduleItems
       .filter(function(item) { return item.itemType === 'task' && !item.completed && item.suggested_start_time })
-      .map(function(item) { return { start: item.suggested_start_time, end: item.suggested_end_time, label: item.title } })
+      .map(function(item) { return { start: item.suggested_start_time, end: item.suggested_end_time, title: item.title } })
 
-    const newConstraints = (self.data.scheduleConstraints || '') +
-      (existingSlots.length > 0
-        ? '\n已有任务时段（请勿占用）：' + existingSlots.map(function(s) { return s.start + '-' + s.end }).join('、')
-        : '')
-
-    self.generatePlan(self.data.availableHours || 4, newConstraints, 0, completedMinutes, currentTime)
+    self.generatePlan(self.data.availableHours || 4, self.data.scheduleConstraints, 0, completedMinutes, currentTime, existingSlots)
   },
 
   // ── 任务勾选 ──
@@ -730,6 +747,8 @@ Page({
         this.setData({ streak: res.streak || this.data.streak })
         this.showCompletionScreen(this.data.mainTasks.length)
       }
+      // 立即更新已完成历史，不等下次刷新
+      this._addToCompletedHistory(trackingTaskId)
     } catch (e) {
       if (trackingIsLastTask) wx.hideLoading()
       const tasks = [...this.data.mainTasks]
@@ -750,6 +769,7 @@ Page({
           this.setData({ streak: res.streak || this.data.streak })
           this.showCompletionScreen(this.data.mainTasks.length)
         }
+        this._addToCompletedHistory(trackingTaskId)
       })
       .catch(() => { if (trackingIsLastTask) wx.hideLoading() })
   },
@@ -901,6 +921,9 @@ Page({
     const { id, title } = e.currentTarget.dataset
     wx.vibrateShort({ type: 'light' })
     const startTime = Date.now()
+    // 如果之前有保存进度，从已花费时间推算番茄数（作为计数器起点）
+    const task = this.data.mainTasks.find(t => t._id === id) || {}
+    const alreadyDone = Math.floor((task.time_spent_minutes || 0) / 25)
     this.setData({
       showPomodoro: true,
       pomodoroTaskId: id,
@@ -909,7 +932,8 @@ Page({
       pomodoroSeconds: 25 * 60,
       pomodoroDisplay: '25:00',
       pomodoroProgress: 0,
-      pomodoroStartTime: startTime
+      pomodoroStartTime: startTime,
+      pomodoroCount: alreadyDone
     })
     this._startPomodoroTick()
     // 云端持久化
@@ -942,28 +966,32 @@ Page({
   _onPomodoroPhaseEnd() {
     if (this.data.pomodoroPhase === 'focus') {
       const count = this.data.pomodoroCount + 1
-      this.setData({ pomodoroCount: count, pomodoroPhase: 'break', pomodoroStartTime: Date.now() })
-      wx.showModal({
-        title: `🍅 第 ${count} 个番茄完成！`,
-        content: '休息5分钟，或直接标记任务完成？',
-        confirmText: '休息5分钟',
-        cancelText: '标为完成',
+      this.setData({ pomodoroCount: count })
+      wx.showActionSheet({
+        itemList: ['继续下一个🍅（先休息5分钟）', '暂停离开（保存进度）', '标为任务完成✓'],
         success: res => {
-          if (res.confirm) {
+          if (res.tapIndex === 0) {
+            this.setData({ pomodoroPhase: 'break', pomodoroStartTime: Date.now() })
             this._startPomodoroTick()
+          } else if (res.tapIndex === 1) {
+            this._savePomodoroProgress()
           } else {
             this.handlePomodoroComplete()
           }
+        },
+        fail: () => {
+          // 用户点了取消或关闭，视为暂停离开
+          this._savePomodoroProgress()
         }
       })
     } else {
-      // 休息结束
+      // 休息结束，自动进入下一个专注
       this.setData({ pomodoroPhase: 'focus', pomodoroStartTime: Date.now() })
       wx.showModal({
-        title: '休息结束',
-        content: '继续专注？',
+        title: '☕ 休息结束',
+        content: '继续下一个专注番茄？',
         confirmText: '继续',
-        cancelText: '先停下',
+        cancelText: '离开',
         success: res => {
           if (res.confirm) {
             this._startPomodoroTick()
@@ -973,6 +1001,23 @@ Page({
         }
       })
     }
+  },
+
+  _savePomodoroProgress() {
+    if (this._pomodoroTimer) { clearInterval(this._pomodoroTimer); this._pomodoroTimer = null }
+    const taskId = this.data.pomodoroTaskId
+    // 本地更新任务剩余番茄数
+    const updatedTasks = this.data.mainTasks.map(t => {
+      if (t._id === taskId) {
+        const spent = (t.time_spent_minutes || 0) + 25
+        const remaining = Math.max(0, (t.estimated_minutes || 30) - spent)
+        return { ...t, time_spent_minutes: spent, remainingPomodoros: Math.ceil(remaining / 25) }
+      }
+      return t
+    })
+    this.setData({ mainTasks: updatedTasks, showPomodoro: false, pomodoroTaskId: null })
+    callCloud('savePomodoroState', { action: 'addTime', taskId, minutesToAdd: 25 }).catch(() => {})
+    wx.showToast({ title: '已保存进度，下次继续', icon: 'success', duration: 2000 })
   },
 
   handlePomodoroComplete() {
@@ -992,11 +1037,51 @@ Page({
     callCloud('savePomodoroState', { action: 'end' }).catch(() => {})
   },
 
+  _maybeRequestSubscription() {
+    const today = todayString()
+    if (wx.getStorageSync('last_sub_date') === today) return
+    if (this.data.onboardingStep > 0) return
+    if (this.data.showCompletion) return
+
+    const self = this
+    setTimeout(() => {
+      wx.requestSubscribeMessage({
+        tmplIds: [
+          'P9sWcD2pBtrsB4MZzhULtQw65HMXPCE_Hsx5QSZ_J-k',
+          'WwdP2DizjA9fmYOIOqKd-yWFcCFKmBg9h-TLm4U8r4E',
+          'J1dVGMwQvPuVfQZJBxoQc9lZk9aCHIvQREa5kewt14w'
+        ],
+        success: (res) => {
+          const types = []
+          if (res['P9sWcD2pBtrsB4MZzhULtQw65HMXPCE_Hsx5QSZ_J-k'] === 'accept') types.push('morning')
+          if (res['WwdP2DizjA9fmYOIOqKd-yWFcCFKmBg9h-TLm4U8r4E'] === 'accept') types.push('evening')
+          if (res['J1dVGMwQvPuVfQZJBxoQc9lZk9aCHIvQREa5kewt14w'] === 'accept') types.push('friday')
+          if (types.length > 0) {
+            callCloud('savePushAuth', { date: today, types }).catch(() => {})
+          }
+        },
+        complete: () => {
+          wx.setStorageSync('last_sub_date', today)
+        }
+      })
+    }, 1500)
+  },
+
   handleRequestNextPush() {
     wx.requestSubscribeMessage({
-      tmplIds: ['J1dVGMwQvPuVfQZJBxoQc9lZk9aCHIvQREa5kewt14w'],
-      success: () => {
-        callCloud('savePushAuth', { date: todayString() }).catch(() => {})
+      tmplIds: [
+        'P9sWcD2pBtrsB4MZzhULtQw65HMXPCE_Hsx5QSZ_J-k',
+        'WwdP2DizjA9fmYOIOqKd-yWFcCFKmBg9h-TLm4U8r4E',
+        'J1dVGMwQvPuVfQZJBxoQc9lZk9aCHIvQREa5kewt14w'
+      ],
+      success: (res) => {
+        const types = []
+        if (res['P9sWcD2pBtrsB4MZzhULtQw65HMXPCE_Hsx5QSZ_J-k'] === 'accept') types.push('morning')
+        if (res['WwdP2DizjA9fmYOIOqKd-yWFcCFKmBg9h-TLm4U8r4E'] === 'accept') types.push('evening')
+        if (res['J1dVGMwQvPuVfQZJBxoQc9lZk9aCHIvQREa5kewt14w'] === 'accept') types.push('friday')
+        if (types.length > 0) {
+          callCloud('savePushAuth', { date: todayString(), types }).catch(() => {})
+        }
         this.dismissCompletion()
       },
       fail: () => this.dismissCompletion()
@@ -1052,7 +1137,7 @@ Page({
   handleHabitsWeekendSleep(e) { this.setData({ 'habitsForm.weekendSleepTime': e.detail.value }) },
 
   skipHabits() {
-    wx.navigateTo({ url: '/pages/add-task/add-task' })
+    this.setData({ showOnboarding: false })
   },
 
   goAddFirstTask() {

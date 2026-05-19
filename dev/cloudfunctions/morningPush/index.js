@@ -3,12 +3,50 @@ const https = require('https')
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 
-const TEMPLATE_ID = 'J1dVGMwQvPuVfQZJBxoQc9lZk9aCHIvQREa5kewt14w'
+const TEMPLATE_ID = 'P9sWcD2pBtrsB4MZzhULtQw65HMXPCE_Hsx5QSZ_J-k'
 const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY
+const APPID = 'wxd0de3ba5bb35cb1d'
+const APP_SECRET = process.env.APP_SECRET
 
 const todayStr = () => {
   const d = new Date()
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+function httpsGet(url) {
+  return new Promise((resolve, reject) => {
+    https.get(url, res => {
+      let data = ''
+      res.on('data', chunk => data += chunk)
+      res.on('end', () => {
+        try { resolve(JSON.parse(data)) } catch (e) { reject(e) }
+      })
+    }).on('error', reject)
+  })
+}
+
+function httpsPost(url, body) {
+  const bodyStr = JSON.stringify(body)
+  return new Promise((resolve, reject) => {
+    const u = new URL(url)
+    const options = {
+      hostname: u.hostname,
+      path: u.pathname + u.search,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(bodyStr) }
+    }
+    const req = https.request(options, res => {
+      let data = ''
+      res.on('data', chunk => data += chunk)
+      res.on('end', () => {
+        try { resolve(JSON.parse(data)) } catch (e) { reject(e) }
+      })
+    })
+    req.on('error', reject)
+    req.setTimeout(15000, () => { req.destroy(); reject(new Error('timeout')) })
+    req.write(bodyStr)
+    req.end()
+  })
 }
 
 function callDeepSeek(messages) {
@@ -48,7 +86,19 @@ function callDeepSeek(messages) {
   })
 }
 
-async function generateAndPushForUser(user, today) {
+async function getAccessToken() {
+  const url = `https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=${APPID}&secret=${APP_SECRET}`
+  const res = await httpsGet(url)
+  if (res.errcode) throw new Error(`getAccessToken failed: ${res.errcode} ${res.errmsg}`)
+  return res.access_token
+}
+
+async function sendSubscribeMessage(accessToken, openid, templateId, data, page) {
+  const url = `https://api.weixin.qq.com/cgi-bin/message/subscribe/send?access_token=${accessToken}`
+  return httpsPost(url, { touser: openid, template_id: templateId, page, data })
+}
+
+async function generateAndPushForUser(user, today, accessToken) {
   const openid = user._id
   const defaultHours = (user.settings && user.settings.default_daily_hours) || 4
   const tone = (user.settings && user.settings.ai_tone) || 'friendly'
@@ -64,7 +114,7 @@ async function generateAndPushForUser(user, today) {
   const aiResult = await callDeepSeek([
     {
       role: 'system',
-      content: '你是效率助手Flow。根据任务清单生成今日默认计划。返回JSON：{"main_plan":[{"task_id":"","suggested_minutes":0,"note":""}],"fragment_plan":[],"summary":"简短总结"}'
+      content: '你是效率助手Flow。根据任务清单生成今日默认计划。summary简短总结（不要提可用小时数，只说今天重点做什么）。返回JSON：{"main_plan":[{"task_id":"","suggested_minutes":0,"note":""}],"fragment_plan":[],"summary":"简短总结"}'
     },
     {
       role: 'user',
@@ -93,16 +143,12 @@ async function generateAndPushForUser(user, today) {
     }
   })
 
-  await cloud.openapi.subscribeMessage.send({
-    touser: openid,
-    template_id: TEMPLATE_ID,
-    page: 'pages/index/index',
-    data: {
-      thing1: { value: `今天有 ${planCount} 件要事` },
-      thing2: { value: topTask ? topTask.title.substring(0, 20) : '查看今日计划' },
-      thing3: { value: '今天能用几小时？点击确认' }
-    }
-  })
+  await sendSubscribeMessage(accessToken, openid, TEMPLATE_ID, {
+    thing20: { value: (topTask ? topTask.title : '查看今日计划').substring(0, 20) },
+    time2: { value: today },
+    time11: { value: '07:50' },
+    thing13: { value: (aiResult.summary || '早！今天' + planCount + '件事，开始规划吧').substring(0, 20) }
+  }, 'pages/index/index')
 }
 
 exports.main = async (event, context) => {
@@ -111,18 +157,23 @@ exports.main = async (event, context) => {
 
   try {
     const authRes = await db.collection('push_auth')
-      .where({ target_date: today, used: false })
+      .where({ push_type: 'morning', target_date: today, used: false })
       .limit(100)
       .get()
 
     const authorizedUsers = authRes.data || []
     console.log(`Found ${authorizedUsers.length} users with push auth`)
 
+    if (authorizedUsers.length === 0) return { date: today, processed: 0, results: [] }
+
+    const accessToken = await getAccessToken()
+    console.log('access_token obtained')
+
     const results = []
     for (const auth of authorizedUsers) {
       try {
         const userRes = await db.collection('users').doc(auth.user_id).get()
-        await generateAndPushForUser(userRes.data, today)
+        await generateAndPushForUser(userRes.data, today, accessToken)
         await db.collection('push_auth').doc(auth._id).update({ data: { used: true } })
         results.push({ user_id: auth.user_id, status: 'success' })
       } catch (e) {

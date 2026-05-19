@@ -5,7 +5,7 @@ const db = cloud.database()
 exports.main = async (event, context) => {
   const wxContext = cloud.getWXContext()
   const openid = wxContext.OPENID
-  const { action, taskId, taskTitle, startTime, phase, totalSeconds } = event
+  const { action, taskId, taskTitle, startTime, phase, totalSeconds, minutesToAdd } = event
 
   try {
     if (action === 'start') {
@@ -19,6 +19,14 @@ exports.main = async (event, context) => {
             total_seconds: totalSeconds || 25 * 60
           }
         }
+      })
+    } else if (action === 'addTime') {
+      // 记录番茄钟已花费时间到任务
+      await db.collection('tasks').doc(taskId).update({
+        data: { time_spent_minutes: db.command.inc(minutesToAdd || 25) }
+      })
+      await db.collection('users').doc(openid).update({
+        data: { active_pomodoro: db.command.remove() }
       })
     } else {
       await db.collection('users').doc(openid).update({

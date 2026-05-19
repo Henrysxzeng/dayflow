@@ -24,7 +24,9 @@ const formatDeadline = (dateStr) => {
   const d = safeDate(dateStr)
   if (!d || isNaN(d.getTime())) return '无截止'
   const today = new Date()
-  const diff = Math.ceil((d - today) / (1000 * 60 * 60 * 24))
+  const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime()
+  const deadlineDate = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
+  const diff = Math.round((deadlineDate - todayDate) / (1000 * 60 * 60 * 24))
   if (diff < 0) return '已过期'
   if (diff === 0) return '今天截止'
   if (diff === 1) return '明天截止'

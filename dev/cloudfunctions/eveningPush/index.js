@@ -1,61 +1,122 @@
 const cloud = require('wx-server-sdk')
+const https = require('https')
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 
-const TEMPLATE_ID = 'J1dVGMwQvPuVfQZJBxoQc9lZk9aCHIvQREa5kewt14w'
+const TEMPLATE_ID = 'WwdP2DizjA9fmYOIOqKd-yWFcCFKmBg9h-TLm4U8r4E'
+const APPID = 'wxd0de3ba5bb35cb1d'
+const APP_SECRET = process.env.APP_SECRET
 
 const todayStr = () => {
   const d = new Date()
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
+function httpsGet(url) {
+  return new Promise((resolve, reject) => {
+    https.get(url, res => {
+      let data = ''
+      res.on('data', chunk => data += chunk)
+      res.on('end', () => {
+        try { resolve(JSON.parse(data)) } catch (e) { reject(e) }
+      })
+    }).on('error', reject)
+  })
+}
+
+function httpsPost(url, body) {
+  const bodyStr = JSON.stringify(body)
+  return new Promise((resolve, reject) => {
+    const u = new URL(url)
+    const options = {
+      hostname: u.hostname,
+      path: u.pathname + u.search,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(bodyStr) }
+    }
+    const req = https.request(options, res => {
+      let data = ''
+      res.on('data', chunk => data += chunk)
+      res.on('end', () => {
+        try { resolve(JSON.parse(data)) } catch (e) { reject(e) }
+      })
+    })
+    req.on('error', reject)
+    req.setTimeout(15000, () => { req.destroy(); reject(new Error('timeout')) })
+    req.write(bodyStr)
+    req.end()
+  })
+}
+
+async function getAccessToken() {
+  const url = `https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=${APPID}&secret=${APP_SECRET}`
+  const res = await httpsGet(url)
+  if (res.errcode) throw new Error(`getAccessToken failed: ${res.errcode} ${res.errmsg}`)
+  return res.access_token
+}
+
+async function sendSubscribeMessage(accessToken, openid, templateId, data, page) {
+  const url = `https://api.weixin.qq.com/cgi-bin/message/subscribe/send?access_token=${accessToken}`
+  return httpsPost(url, { touser: openid, template_id: templateId, page, data })
+}
+
 exports.main = async (event, context) => {
   const today = todayStr()
 
   try {
-    // 找今天有计划但还没完成任务的用户
     const plansRes = await db.collection('daily_plans')
       .where({ plan_date: today })
       .limit(200)
       .get()
 
+    if (plansRes.data.length === 0) return { today, pushed: 0 }
+
+    console.log(`found ${plansRes.data.length} plans for today`)
+    const accessToken = await getAccessToken()
+    console.log('access_token obtained')
     let pushed = 0
 
     for (const plan of plansRes.data || []) {
-      if (!plan.selected_task_ids || plan.selected_task_ids.length === 0) continue
+      if (!plan.selected_task_ids || plan.selected_task_ids.length === 0) {
+        console.log(`plan ${plan._id}: no tasks selected`)
+        continue
+      }
 
-      // 检查今天的完成情况
-      const logRes = await db.collection('daily_logs')
-        .where({ user_id: plan.user_id, log_date: today })
+      const tasksRes = await db.collection('tasks')
+        .where({ _id: db.command.in(plan.selected_task_ids), status: db.command.neq('completed') })
         .get()
+      const remainingCount = (tasksRes.data || []).length
+      if (remainingCount <= 0) {
+        console.log(`plan ${plan._id}: all ${plan.selected_task_ids.length} tasks completed`)
+        continue
+      }
 
-      const log = logRes.data && logRes.data[0]
-      const completedToday = log ? (log.tasks_completed || 0) : 0
-      const remainingCount = plan.selected_task_ids.length - completedToday
-
-      if (remainingCount <= 0) continue // 已完成，不推送
-
-      // 检查是否有推送授权（复用今天的授权）
+      console.log(`plan ${plan._id}: ${remainingCount} remaining tasks, looking for push_auth`)
       const authRes = await db.collection('push_auth')
-        .where({ user_id: plan.user_id, target_date: today })
+        .where({ user_id: plan.user_id, push_type: 'evening', target_date: today, used: false })
         .get()
-
-      if (!authRes.data || authRes.data.length === 0) continue
+      if (!authRes.data || authRes.data.length === 0) {
+        console.log(`plan ${plan._id}: no evening push_auth for ${plan.user_id}`)
+        continue
+      }
 
       try {
-        await cloud.openapi.subscribeMessage.send({
-          touser: plan.user_id,
-          template_id: TEMPLATE_ID,
-          page: 'pages/index/index',
-          data: {
-            thing1: { value: `今天还有 ${remainingCount} 件事没完成` },
-            thing2: { value: remainingCount === 1 ? '最后一件，收个尾吧' : '明天等你的事少一点' },
-            thing3: { value: '现在还来得及，Flow 等你' }
+        const sendRes = await sendSubscribeMessage(accessToken, plan.user_id, TEMPLATE_ID, {
+          time1: { value: '20:00' },
+          thing2: { value: remainingCount + '件事还没做？清掉好入睡' }
+        }, 'pages/index/index')
+
+        if (sendRes.errcode === 0) {
+          await db.collection('push_auth').doc(authRes.data[0]._id).update({ data: { used: true } })
+          pushed++
+        } else {
+          console.log(`send failed for ${plan.user_id}: ${sendRes.errcode} ${sendRes.errmsg}`)
+          if (sendRes.errcode === 43101) {
+            await db.collection('push_auth').doc(authRes.data[0]._id).update({ data: { used: true } })
           }
-        })
-        pushed++
+        }
       } catch (e) {
-        console.log(`evening push failed for ${plan.user_id}:`, e.message)
+        console.log('evening push failed for ' + plan.user_id + ':', e.message)
       }
     }
 

@@ -290,14 +290,33 @@ Page({
   },
 
   // ── 提交 ──
-  async handleSubmit() {
+  handleSubmit() {
     const { form } = this.data
     if (!form.title.trim()) { wx.showToast({ title: '请填写任务名称', icon: 'none' }); return }
     if (form.estimatedMinutes <= 0) { wx.showToast({ title: '请填写预计用时', icon: 'none' }); return }
 
+    const needsReminder = (form.reminderMinutesBefore || 0) > 0
+
+    if (needsReminder) {
+      var self = this
+      wx.requestSubscribeMessage({
+        tmplIds: ['J1dVGMwQvPuVfQZJBxoQc9lZk9aCHIvQREa5kewt14w'],
+        success: function() { self._deadlineSubGranted = true },
+        complete: function() { self._doSave() }
+      })
+    } else {
+      this._doSave()
+    }
+  },
+
+  async _doSave() {
+    const { form } = this.data
+    const subGranted = this._deadlineSubGranted
+    this._deadlineSubGranted = false
+
     let deadline = null
     if (form.deadlineDate) {
-      deadline = form.deadlineTime ? `${form.deadlineDate} ${form.deadlineTime}` : form.deadlineDate
+      deadline = form.deadlineTime ? form.deadlineDate + ' ' + form.deadlineTime : form.deadlineDate
     }
 
     wx.showLoading({ title: this.data.isEditMode ? '保存中...' : '添加中...' })
@@ -310,8 +329,8 @@ Page({
           friendUserId: this.data.selectedFriendId
         })
         wx.hideLoading()
-        wx.showToast({ title: `已邀请 ${this.data.selectedFriendName}！`, icon: 'success' })
-        setTimeout(() => wx.navigateBack(), 800)
+        wx.showToast({ title: '已邀请 ' + this.data.selectedFriendName + '！', icon: 'success' })
+        setTimeout(function() { wx.navigateBack() }, 800)
         return
       }
 
@@ -331,6 +350,9 @@ Page({
       if (this.data.isEditMode) {
         await callCloud('updateTask', { taskId: this.data.editTaskId, title: taskData.title, deadline: taskData.deadline, estimatedMinutes: taskData.estimatedMinutes, importance: taskData.importance, description: taskData.description, lockedStartTime: taskData.lockedStartTime, preferredTime: taskData.preferredTime, reminderMinutesBefore: taskData.reminderMinutesBefore })
         wx.hideLoading()
+        if (subGranted) {
+          callCloud('saveTaskPushAuth', { taskId: this.data.editTaskId }).catch(function() {})
+        }
         wx.showToast({ title: '已保存', icon: 'success' })
         setTimeout(function() { wx.navigateBack() }, 800)
       } else {
@@ -338,7 +360,6 @@ Page({
         const newTaskId = addRes && addRes.taskId
         wx.hideLoading()
 
-        // 判断是否紧急（今日截止或重要程度高）
         const today = new Date()
         const tm = today.getMonth() + 1
         const td = today.getDate()
@@ -353,7 +374,9 @@ Page({
           }
         }
 
-        // globalData已设置，直接跳转（不用toast等待，避免与今日页面的modal冲突）
+        if (subGranted && newTaskId) {
+          callCloud('saveTaskPushAuth', { taskId: newTaskId }).catch(function() {})
+        }
         wx.navigateBack()
       }
     } catch (e) {

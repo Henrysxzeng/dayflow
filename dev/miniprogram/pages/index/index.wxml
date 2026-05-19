@@ -220,12 +220,16 @@
       </view>
     </view>
 
-    <!-- 计划已生成：时长标签 + 修改 -->
+    <!-- 计划已生成：时长标签 + 修改 + 编辑约束 -->
     <view wx:if="{{planReady}}" class="row-between" style="margin-bottom:24rpx;">
       <text style="font-size:24rpx; color:#6B7280;">今日可用时间</text>
-      <view bindtap="handleRegenerate" style="display:flex; align-items:center; background:#EFF6FF; padding:8rpx 20rpx; border-radius:20rpx;">
-        <text style="font-size:26rpx; color:#2563EB; font-weight:600;">{{availableHours}}小时</text>
-        <text style="font-size:22rpx; color:#2563EB; margin-left:8rpx;">修改 ›</text>
+      <view style="display:flex; align-items:center;">
+        <text wx:if="{{scheduleConstraints}}" bindtap="handleOpenScheduleInput" style="font-size:20rpx; color:#F59E0B; background:#FFFBEB; border:1rpx solid #FDE68A; padding:4rpx 16rpx; border-radius:12rpx; max-width:180rpx; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-right:16rpx;">📌 {{scheduleConstraints}}</text>
+        <text wx:else bindtap="handleOpenScheduleInput" style="font-size:20rpx; color:#6B7280; background:#F3F4F6; padding:4rpx 16rpx; border-radius:12rpx; margin-right:16rpx;">📅 有事要避开</text>
+        <view bindtap="handleRegenerate" style="display:flex; align-items:center; background:#EFF6FF; padding:8rpx 20rpx; border-radius:20rpx;">
+          <text style="font-size:26rpx; color:#2563EB; font-weight:600;">{{availableHours}}小时</text>
+          <text style="font-size:22rpx; color:#2563EB; margin-left:8rpx;">修改 ›</text>
+        </view>
       </view>
     </view>
 
@@ -308,7 +312,7 @@
             <view style="display:flex; flex-direction:column; align-items:flex-end; margin-left:16rpx; flex-shrink:0; gap:10rpx;">
               <text style="font-size:24rpx; color:#6B7280;">{{item.durationDisplay}}</text>
               <view wx:if="{{!item.completed}}" bindtap="handleStartPomodoro" data-id="{{item._id}}" data-title="{{item.title}}" style="background:#FEF3C7; border-radius:12rpx; padding:4rpx 16rpx;">
-                <text style="font-size:20rpx; color:#92400E;">🍅 专注</text>
+                <text style="font-size:20rpx; color:#92400E;">🍅 {{item.remainingPomodoros > 1 ? item.remainingPomodoros + '个' : '专注'}}</text>
               </view>
             </view>
           </view>
